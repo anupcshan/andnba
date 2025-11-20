@@ -22,7 +22,9 @@ data class Game(
     val period: Int,
     val gameClock: String,
     val homeTeam: Team,
-    val awayTeam: Team
+    val awayTeam: Team,
+    // Arena info (fetched from boxscore)
+    var arenaName: String? = null
 )
 
 @Serializable

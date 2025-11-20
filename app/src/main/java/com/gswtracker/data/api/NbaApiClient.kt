@@ -52,5 +52,9 @@ class NbaApiClient(context: Context) {
         fun getPlayByPlayUrl(gameId: String): String {
             return "$BASE_URL/playbyplay/playbyplay_$gameId.json"
         }
+
+        fun getBoxScoreUrl(gameId: String): String {
+            return "$BASE_URL/boxscore/boxscore_$gameId.json"
+        }
     }
 }

@@ -103,11 +103,19 @@ fun ScheduledGameView(game: Game) {
     ) {
         // Header
         Text(
-            text = "🏀 Warriors vs ${getOpponentName(game)}",
+            text = getGameTitle(game),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.SemiBold
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
+        game.arenaName?.let { arena ->
+            Text(
+                text = arena,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+        }
         Text(
             text = game.gameStatusText,
             style = MaterialTheme.typography.bodyMedium,
@@ -149,11 +157,19 @@ fun LiveGameView(game: Game, wormData: List<com.gswtracker.data.model.WormPoint>
     ) {
         // Header
         Text(
-            text = "🏀 Warriors vs ${getOpponentName(game)}",
+            text = getGameTitle(game),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.SemiBold
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
+        game.arenaName?.let { arena ->
+            Text(
+                text = arena,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+        }
         Text(
             text = "Q${game.period} ${game.gameClock}",
             style = MaterialTheme.typography.bodyMedium,
@@ -217,11 +233,19 @@ fun FinalGameView(game: Game, wormData: List<com.gswtracker.data.model.WormPoint
     ) {
         // Header
         Text(
-            text = "🏀 Warriors vs ${getOpponentName(game)}",
+            text = getGameTitle(game),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.SemiBold
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
+        game.arenaName?.let { arena ->
+            Text(
+                text = arena,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+        }
         Text(
             text = "Final",
             style = MaterialTheme.typography.bodyMedium,
@@ -422,5 +446,13 @@ private fun getOpponentTricode(game: Game): String {
         game.awayTeam.teamTricode
     } else {
         game.homeTeam.teamTricode
+    }
+}
+
+private fun getGameTitle(game: Game): String {
+    return if (game.homeTeam.teamTricode == "GSW") {
+        "🏀 Warriors vs ${getOpponentName(game)}"
+    } else {
+        "🏀 Warriors @ ${getOpponentName(game)}"
     }
 }

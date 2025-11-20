@@ -16,13 +16,23 @@ class GameRepository(private val apiService: NbaApiService) {
 
     /**
      * Get today's Warriors game, if any
+     * Also fetches arena information from boxscore
      */
     suspend fun getTodaysGswGame(): Result<Game?> {
-        return apiService.getScoreboard().map { response ->
-            response.scoreboard.games.find { game ->
+        return apiService.getScoreboard().mapCatching { response ->
+            val game = response.scoreboard.games.find { game ->
                 game.homeTeam.teamTricode == GSW_TEAM_CODE ||
                         game.awayTeam.teamTricode == GSW_TEAM_CODE
             }
+
+            // Fetch arena info if game exists
+            if (game != null) {
+                apiService.getBoxScore(game.gameId).onSuccess { boxScore ->
+                    game.arenaName = boxScore.game.arena?.arenaName
+                }
+            }
+
+            game
         }
     }
 
