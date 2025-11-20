@@ -125,7 +125,7 @@ fun ScheduledGameView(game: Game) {
             TeamScore("GSW", "--", "${game.homeTeam.wins}-${game.homeTeam.losses}")
             Text("vs", style = MaterialTheme.typography.bodyLarge)
             TeamScore(
-                getOpponentName(game),
+                getOpponentTricode(game),
                 "--",
                 "${game.awayTeam.wins}-${game.awayTeam.losses}"
             )
@@ -175,7 +175,7 @@ fun LiveGameView(game: Game, wormData: List<com.gswtracker.data.model.WormPoint>
             TeamScore("GSW", gswTeam.score.toString(), "${gswTeam.wins}-${gswTeam.losses}")
             Text("vs", style = MaterialTheme.typography.bodyLarge)
             TeamScore(
-                getOpponentName(game),
+                getOpponentTricode(game),
                 oppTeam.score.toString(),
                 "${oppTeam.wins}-${oppTeam.losses}"
             )
@@ -244,7 +244,7 @@ fun FinalGameView(game: Game, wormData: List<com.gswtracker.data.model.WormPoint
             TeamScore("GSW", gswTeam.score.toString(), "${gswTeam.wins}-${gswTeam.losses}")
             Text("vs", style = MaterialTheme.typography.bodyLarge)
             TeamScore(
-                getOpponentName(game),
+                getOpponentTricode(game),
                 oppTeam.score.toString(),
                 "${oppTeam.wins}-${oppTeam.losses}"
             )
@@ -391,7 +391,7 @@ fun QuarterBreakdown(game: Game) {
         // Opponent row
         Row(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = getOpponentName(game),
+                text = getOpponentTricode(game),
                 modifier = Modifier.weight(0.3f),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
@@ -410,6 +410,14 @@ fun QuarterBreakdown(game: Game) {
 }
 
 private fun getOpponentName(game: Game): String {
+    return if (game.homeTeam.teamTricode == "GSW") {
+        game.awayTeam.teamName
+    } else {
+        game.homeTeam.teamName
+    }
+}
+
+private fun getOpponentTricode(game: Game): String {
     return if (game.homeTeam.teamTricode == "GSW") {
         game.awayTeam.teamTricode
     } else {
