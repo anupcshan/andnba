@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Warriors Brand Colors -->
+    <color name="warriors_gold">#FFC72C</color>
+    <color name="warriors_blue">#1D428A</color>
+
+    <!-- Worm Chart Colors -->
+    <color name="gsw_winning">#4CAF50</color>
+    <color name="gsw_losing">#F44336</color>
+
+    <!-- Material 3 seed colors -->
+    <color name="seed">#FFC72C</color>
+</resources>
