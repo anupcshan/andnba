@@ -1,4 +1,4 @@
-package com.gswtracker.data.model
+package `in`.anupcshan.gswtracker.data.model
 
 import kotlinx.serialization.Serializable
 

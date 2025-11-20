@@ -165,7 +165,7 @@ The app currently shows a placeholder screen with:
    ./gradlew installDebug
    ```
 
-2. **Begin Phase 1**: Create data models in `app/src/main/java/com/gswtracker/data/model/`
+2. **Begin Phase 1**: Create data models in `app/src/main/java/in/anupcshan/gswtracker/data/model/`
 
 3. **Test API responses**: Use `curl` or Postman to understand response structure
 

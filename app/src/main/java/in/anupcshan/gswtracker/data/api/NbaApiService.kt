@@ -1,8 +1,8 @@
-package com.gswtracker.data.api
+package `in`.anupcshan.gswtracker.data.api
 
-import com.gswtracker.data.model.BoxScoreResponse
-import com.gswtracker.data.model.PlayByPlayResponse
-import com.gswtracker.data.model.ScoreboardResponse
+import `in`.anupcshan.gswtracker.data.model.BoxScoreResponse
+import `in`.anupcshan.gswtracker.data.model.PlayByPlayResponse
+import `in`.anupcshan.gswtracker.data.model.ScoreboardResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json

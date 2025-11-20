@@ -71,7 +71,7 @@ andnba/
 │   ├── proguard-rules.pro   # ProGuard rules for release builds
 │   └── src/main/
 │       ├── AndroidManifest.xml
-│       ├── java/com/gswtracker/
+│       ├── java/in/anupcshan/gswtracker/
 │       │   ├── GswTrackerApp.kt      # Application class
 │       │   ├── MainActivity.kt        # Main activity
 │       │   └── ui/

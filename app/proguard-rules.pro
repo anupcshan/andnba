@@ -13,11 +13,11 @@
     kotlinx.serialization.KSerializer serializer(...);
 }
 
--keep,includedescriptorclasses class com.gswtracker.**$$serializer { *; }
--keepclassmembers class com.gswtracker.** {
+-keep,includedescriptorclasses class in.anupcshan.gswtracker.**$$serializer { *; }
+-keepclassmembers class in.anupcshan.gswtracker.** {
     *** Companion;
 }
--keepclasseswithmembers class com.gswtracker.** {
+-keepclasseswithmembers class in.anupcshan.gswtracker.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
 

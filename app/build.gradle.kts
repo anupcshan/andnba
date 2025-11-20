@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.gswtracker"
+    namespace = "in.anupcshan.gswtracker"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.gswtracker"
+        applicationId = "in.anupcshan.gswtracker"
         minSdk = 26
         targetSdk = 34
         versionCode = 1

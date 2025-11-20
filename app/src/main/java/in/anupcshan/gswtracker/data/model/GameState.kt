@@ -1,4 +1,4 @@
-package com.gswtracker.data.model
+package `in`.anupcshan.gswtracker.data.model
 
 /**
  * Represents the different states of the game screen

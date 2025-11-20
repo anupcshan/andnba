@@ -1,4 +1,4 @@
-package com.gswtracker.ui.theme
+package `in`.anupcshan.gswtracker.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

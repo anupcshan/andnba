@@ -1,4 +1,4 @@
-package com.gswtracker
+package `in`.anupcshan.gswtracker
 
 import android.app.Application
 

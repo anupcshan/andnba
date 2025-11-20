@@ -1,9 +1,9 @@
-package com.gswtracker.data.repository
+package `in`.anupcshan.gswtracker.data.repository
 
-import com.gswtracker.data.api.NbaApiService
-import com.gswtracker.data.model.Game
-import com.gswtracker.data.model.GameAction
-import com.gswtracker.data.model.WormPoint
+import `in`.anupcshan.gswtracker.data.api.NbaApiService
+import `in`.anupcshan.gswtracker.data.model.Game
+import `in`.anupcshan.gswtracker.data.model.GameAction
+import `in`.anupcshan.gswtracker.data.model.WormPoint
 
 /**
  * Repository for fetching and processing NBA game data

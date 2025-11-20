@@ -1,4 +1,4 @@
-package com.gswtracker
+package `in`.anupcshan.gswtracker
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -8,10 +8,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.gswtracker.ui.GameScreen
-import com.gswtracker.ui.theme.GswTrackerTheme
-import com.gswtracker.ui.viewmodel.GameViewModel
-import com.gswtracker.ui.viewmodel.GameViewModelFactory
+import `in`.anupcshan.gswtracker.ui.GameScreen
+import `in`.anupcshan.gswtracker.ui.theme.GswTrackerTheme
+import `in`.anupcshan.gswtracker.ui.viewmodel.GameViewModel
+import `in`.anupcshan.gswtracker.ui.viewmodel.GameViewModelFactory
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

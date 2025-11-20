@@ -1,9 +1,9 @@
-package com.gswtracker.ui.viewmodel
+package `in`.anupcshan.gswtracker.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.gswtracker.data.model.GameState
-import com.gswtracker.data.repository.GameRepository
+import `in`.anupcshan.gswtracker.data.model.GameState
+import `in`.anupcshan.gswtracker.data.repository.GameRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,7 +63,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     /**
      * Determine game state based on status
      */
-    private suspend fun handleGameState(game: com.gswtracker.data.model.Game) {
+    private suspend fun handleGameState(game: `in`.anupcshan.gswtracker.data.model.Game) {
         when (game.gameStatus) {
             1 -> {
                 // Game scheduled
@@ -95,7 +95,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     /**
      * Fetch worm data if quarter has changed
      */
-    private suspend fun fetchWormDataIfNeeded(game: com.gswtracker.data.model.Game) {
+    private suspend fun fetchWormDataIfNeeded(game: `in`.anupcshan.gswtracker.data.model.Game) {
         if (game.period > lastSeenPeriod) {
             // New quarter started - fetch updated play-by-play
             fetchWormData(game)
@@ -106,7 +106,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     /**
      * Fetch worm data for completed game
      */
-    private suspend fun fetchWormDataForFinalGame(game: com.gswtracker.data.model.Game) {
+    private suspend fun fetchWormDataForFinalGame(game: `in`.anupcshan.gswtracker.data.model.Game) {
         val isGswHome = repository.isGswHome(game)
         repository.getWormData(game.gameId, isGswHome)
             .onSuccess { wormData ->
@@ -127,7 +127,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     /**
      * Fetch worm data for live game
      */
-    private suspend fun fetchWormData(game: com.gswtracker.data.model.Game) {
+    private suspend fun fetchWormData(game: `in`.anupcshan.gswtracker.data.model.Game) {
         val isGswHome = repository.isGswHome(game)
         repository.getWormData(game.gameId, isGswHome)
             .onSuccess { wormData ->
@@ -144,7 +144,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     /**
      * Check if quarter has transitioned
      */
-    private fun checkForQuarterTransition(game: com.gswtracker.data.model.Game) {
+    private fun checkForQuarterTransition(game: `in`.anupcshan.gswtracker.data.model.Game) {
         if (game.period > lastSeenPeriod) {
             lastSeenPeriod = game.period
         }

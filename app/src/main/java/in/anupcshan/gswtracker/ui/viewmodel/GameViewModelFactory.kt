@@ -1,11 +1,11 @@
-package com.gswtracker.ui.viewmodel
+package `in`.anupcshan.gswtracker.ui.viewmodel
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.gswtracker.data.api.NbaApiClient
-import com.gswtracker.data.api.NbaApiService
-import com.gswtracker.data.repository.GameRepository
+import `in`.anupcshan.gswtracker.data.api.NbaApiClient
+import `in`.anupcshan.gswtracker.data.api.NbaApiService
+import `in`.anupcshan.gswtracker.data.repository.GameRepository
 
 /**
  * Factory for creating GameViewModel with dependencies

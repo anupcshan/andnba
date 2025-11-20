@@ -1,4 +1,4 @@
-package com.gswtracker.ui
+package `in`.anupcshan.gswtracker.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -11,10 +11,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.gswtracker.data.model.Game
-import com.gswtracker.data.model.GameState
-import com.gswtracker.ui.components.WormChart
-import com.gswtracker.ui.viewmodel.GameViewModel
+import `in`.anupcshan.gswtracker.data.model.Game
+import `in`.anupcshan.gswtracker.data.model.GameState
+import `in`.anupcshan.gswtracker.ui.components.WormChart
+import `in`.anupcshan.gswtracker.ui.viewmodel.GameViewModel
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 
@@ -150,7 +150,7 @@ fun ScheduledGameView(game: Game) {
 }
 
 @Composable
-fun LiveGameView(game: Game, wormData: List<com.gswtracker.data.model.WormPoint> = emptyList()) {
+fun LiveGameView(game: Game, wormData: List<`in`.anupcshan.gswtracker.data.model.WormPoint> = emptyList()) {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -226,7 +226,7 @@ fun LiveGameView(game: Game, wormData: List<com.gswtracker.data.model.WormPoint>
 }
 
 @Composable
-fun FinalGameView(game: Game, wormData: List<com.gswtracker.data.model.WormPoint> = emptyList()) {
+fun FinalGameView(game: Game, wormData: List<`in`.anupcshan.gswtracker.data.model.WormPoint> = emptyList()) {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally

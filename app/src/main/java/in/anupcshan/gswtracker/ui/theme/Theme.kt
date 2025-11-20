@@ -1,4 +1,4 @@
-package com.gswtracker.ui.theme
+package `in`.anupcshan.gswtracker.ui.theme
 
 import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme

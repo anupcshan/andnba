@@ -1,4 +1,4 @@
-package com.gswtracker.data.api
+package `in`.anupcshan.gswtracker.data.api
 
 import android.content.Context
 import kotlinx.serialization.json.Json

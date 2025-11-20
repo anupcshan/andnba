@@ -1,4 +1,4 @@
-package com.gswtracker.ui.components
+package `in`.anupcshan.gswtracker.ui.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
@@ -15,9 +15,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.gswtracker.data.model.WormPoint
-import com.gswtracker.ui.theme.GswLosing
-import com.gswtracker.ui.theme.GswWinning
+import `in`.anupcshan.gswtracker.data.model.WormPoint
+import `in`.anupcshan.gswtracker.ui.theme.GswLosing
+import `in`.anupcshan.gswtracker.ui.theme.GswWinning
 import kotlin.math.abs
 import kotlin.math.max
 
