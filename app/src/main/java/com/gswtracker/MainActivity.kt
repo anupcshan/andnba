@@ -6,12 +6,12 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import com.gswtracker.ui.theme.GswTrackerTheme
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.gswtracker.ui.GameScreen
+import com.gswtracker.ui.theme.GswTrackerTheme
+import com.gswtracker.ui.viewmodel.GameViewModel
+import com.gswtracker.ui.viewmodel.GameViewModelFactory
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -22,7 +22,10 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    GameScreen()
+                    val viewModel: GameViewModel = viewModel(
+                        factory = GameViewModelFactory(applicationContext)
+                    )
+                    GameScreen(viewModel = viewModel)
                 }
             }
         }
