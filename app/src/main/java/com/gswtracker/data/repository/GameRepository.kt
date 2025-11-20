@@ -28,18 +28,21 @@ class GameRepository(private val apiService: NbaApiService) {
 
     /**
      * Get play-by-play data and convert to worm chart points
+     * @param gameId The game ID
+     * @param isGswHome Whether GSW is the home team (for correct score differential calculation)
      */
-    suspend fun getWormData(gameId: String): Result<List<WormPoint>> {
+    suspend fun getWormData(gameId: String, isGswHome: Boolean): Result<List<WormPoint>> {
         return apiService.getPlayByPlay(gameId).map { response ->
-            processPlayByPlayToWorm(response.game.actions)
+            processPlayByPlayToWorm(response.game.actions, isGswHome)
         }
     }
 
     /**
      * Process play-by-play actions into worm chart data points
      * Filters for scoring events and converts to time-series data
+     * @param isGswHome Whether GSW is the home team (affects score differential calculation)
      */
-    private fun processPlayByPlayToWorm(actions: List<GameAction>): List<WormPoint> {
+    private fun processPlayByPlayToWorm(actions: List<GameAction>, isGswHome: Boolean): List<WormPoint> {
         return actions
             .filter { it.scoreHome != null && it.scoreAway != null }
             .mapNotNull { action ->
@@ -48,12 +51,16 @@ class GameRepository(private val apiService: NbaApiService) {
                     val awayScore = action.scoreAway?.toIntOrNull() ?: return@mapNotNull null
                     val gameTimeSeconds = calculateGameTimeSeconds(action.period, action.clock)
 
+                    // Calculate score differential from GSW's perspective
+                    val gswScore = if (isGswHome) homeScore else awayScore
+                    val oppScore = if (isGswHome) awayScore else homeScore
+
                     WormPoint(
                         gameTimeSeconds = gameTimeSeconds,
                         period = action.period,
                         homeScore = homeScore,
                         awayScore = awayScore,
-                        scoreDiff = homeScore - awayScore
+                        scoreDiff = gswScore - oppScore // Always GSW - Opponent
                     )
                 } catch (e: Exception) {
                     null

@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gswtracker.data.model.Game
 import com.gswtracker.data.model.GameState
+import com.gswtracker.ui.components.WormChart
 import com.gswtracker.ui.viewmodel.GameViewModel
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
@@ -36,8 +37,8 @@ fun GameScreen(viewModel: GameViewModel) {
                 is GameState.Loading -> LoadingView()
                 is GameState.NoGameToday -> NoGameView(state.nextGame)
                 is GameState.GameScheduled -> ScheduledGameView(state.game)
-                is GameState.GameLive -> LiveGameView(state.game)
-                is GameState.GameFinal -> FinalGameView(state.game)
+                is GameState.GameLive -> LiveGameView(state.game, state.wormData)
+                is GameState.GameFinal -> FinalGameView(state.game, state.wormData)
                 is GameState.Error -> ErrorView(state.message) { viewModel.refreshGame() }
             }
         }
@@ -141,7 +142,7 @@ fun ScheduledGameView(game: Game) {
 }
 
 @Composable
-fun LiveGameView(game: Game) {
+fun LiveGameView(game: Game, wormData: List<com.gswtracker.data.model.WormPoint> = emptyList()) {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -199,11 +200,17 @@ fun LiveGameView(game: Game) {
 
         // Quarter scores
         QuarterBreakdown(game)
+
+        // Worm chart (if data available)
+        if (wormData.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(24.dp))
+            WormChart(wormData = wormData)
+        }
     }
 }
 
 @Composable
-fun FinalGameView(game: Game) {
+fun FinalGameView(game: Game, wormData: List<com.gswtracker.data.model.WormPoint> = emptyList()) {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -262,6 +269,10 @@ fun FinalGameView(game: Game) {
 
         // Quarter scores
         QuarterBreakdown(game)
+
+        // Worm chart
+        Spacer(modifier = Modifier.height(24.dp))
+        WormChart(wormData = wormData)
     }
 }
 

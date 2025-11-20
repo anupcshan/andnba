@@ -98,7 +98,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     private suspend fun fetchWormDataIfNeeded(game: com.gswtracker.data.model.Game) {
         if (game.period > lastSeenPeriod) {
             // New quarter started - fetch updated play-by-play
-            fetchWormData(game.gameId)
+            fetchWormData(game)
             lastSeenPeriod = game.period
         }
     }
@@ -107,7 +107,8 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
      * Fetch worm data for completed game
      */
     private suspend fun fetchWormDataForFinalGame(game: com.gswtracker.data.model.Game) {
-        repository.getWormData(game.gameId)
+        val isGswHome = repository.isGswHome(game)
+        repository.getWormData(game.gameId, isGswHome)
             .onSuccess { wormData ->
                 _gameState.value = GameState.GameFinal(
                     game = game,
@@ -126,8 +127,9 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     /**
      * Fetch worm data for live game
      */
-    private suspend fun fetchWormData(gameId: String) {
-        repository.getWormData(gameId)
+    private suspend fun fetchWormData(game: com.gswtracker.data.model.Game) {
+        val isGswHome = repository.isGswHome(game)
+        repository.getWormData(game.gameId, isGswHome)
             .onSuccess { wormData ->
                 val currentState = _gameState.value
                 if (currentState is GameState.GameLive) {
