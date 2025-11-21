@@ -2,11 +2,14 @@ package `in`.anupcshan.gswtracker.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -19,12 +22,15 @@ import `in`.anupcshan.gswtracker.ui.components.WormChart
 import `in`.anupcshan.gswtracker.ui.viewmodel.GameViewModel
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameScreen(viewModel: GameViewModel) {
     val gameState by viewModel.gameState.collectAsState()
     val selectedTeam by viewModel.selectedTeam.collectAsState()
+    val isPolling by viewModel.isPolling.collectAsState()
+    val lastUpdateTime by viewModel.lastUpdateTime.collectAsState()
     val isRefreshing = gameState is GameState.Loading
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -51,6 +57,14 @@ fun GameScreen(viewModel: GameViewModel) {
                     is GameState.GameLive -> LiveGameView(state.game, state.wormData, selectedTeam)
                     is GameState.GameFinal -> FinalGameView(state.game, state.wormData, selectedTeam)
                     is GameState.Error -> ErrorView(state.message) { viewModel.refreshGame() }
+                }
+
+                // Polling indicator in top-right corner
+                if (isPolling) {
+                    PollingIndicator(
+                        lastUpdateTime = lastUpdateTime,
+                        modifier = Modifier.align(Alignment.TopEnd)
+                    )
                 }
             }
         }
@@ -561,4 +575,45 @@ fun TeamSelector(
             }
         }
     }
+}
+
+@Composable
+fun PollingIndicator(
+    lastUpdateTime: Long?,
+    modifier: Modifier = Modifier
+) {
+    // Calculate alpha based on time since last update
+    var currentAlpha by remember { mutableStateOf(1f) }
+
+    LaunchedEffect(lastUpdateTime) {
+        if (lastUpdateTime != null) {
+            // Start at full brightness
+            currentAlpha = 1f
+
+            // Gradually fade over 15 seconds
+            val fadeStart = lastUpdateTime
+            while (true) {
+                val elapsed = System.currentTimeMillis() - fadeStart
+                val progress = (elapsed / 15_000f).coerceIn(0f, 1f)
+
+                // Fade from 1.0 to 0.2 (never fully invisible)
+                currentAlpha = 1f - (progress * 0.8f)
+
+                delay(100) // Update every 100ms for smooth animation
+
+                if (progress >= 1f) break
+            }
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .padding(8.dp)
+            .size(12.dp)
+            .alpha(currentAlpha)
+            .background(
+                color = Color(0xFF4CAF50), // Green
+                shape = CircleShape
+            )
+    )
 }

@@ -25,6 +25,12 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     private val _selectedTeam = MutableStateFlow(NBATeams.DEFAULT_TEAM)
     val selectedTeam: StateFlow<NBATeam> = _selectedTeam.asStateFlow()
 
+    private val _isPolling = MutableStateFlow(false)
+    val isPolling: StateFlow<Boolean> = _isPolling.asStateFlow()
+
+    private val _lastUpdateTime = MutableStateFlow<Long?>(null)
+    val lastUpdateTime: StateFlow<Long?> = _lastUpdateTime.asStateFlow()
+
     private var pollingJob: Job? = null
     private var lastSeenPeriod: Int = 0
     private var currentGameId: String? = null
@@ -61,6 +67,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
      */
     private suspend fun fetchGameData() {
         _gameState.value = GameState.Loading
+        _lastUpdateTime.value = System.currentTimeMillis()
         val teamTricode = _selectedTeam.value.tricode
 
         repository.getTodaysTeamGame(teamTricode)
@@ -215,9 +222,10 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     private fun startPollingIfNeeded() {
         if (pollingJob?.isActive == true) return
 
+        _isPolling.value = true
         pollingJob = viewModelScope.launch {
             while (true) {
-                delay(60_000) // 60 seconds
+                delay(15_000) // 15 seconds
                 fetchGameData()
             }
         }
@@ -227,6 +235,8 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
      * Stop polling
      */
     private fun stopPolling() {
+        _isPolling.value = false
+        _lastUpdateTime.value = null
         pollingJob?.cancel()
         pollingJob = null
     }
