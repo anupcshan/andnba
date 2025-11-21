@@ -4,6 +4,8 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import `in`.anupcshan.gswtracker.data.model.GameState
+import `in`.anupcshan.gswtracker.data.model.NBATeam
+import `in`.anupcshan.gswtracker.data.model.NBATeams
 import `in`.anupcshan.gswtracker.data.repository.GameRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -20,6 +22,9 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     private val _gameState = MutableStateFlow<GameState>(GameState.Loading)
     val gameState: StateFlow<GameState> = _gameState.asStateFlow()
 
+    private val _selectedTeam = MutableStateFlow(NBATeams.DEFAULT_TEAM)
+    val selectedTeam: StateFlow<NBATeam> = _selectedTeam.asStateFlow()
+
     private var pollingJob: Job? = null
     private var lastSeenPeriod: Int = 0
     private var currentGameId: String? = null
@@ -30,6 +35,16 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
     init {
         refreshGame()
+    }
+
+    /**
+     * Change the selected team and refresh game data
+     */
+    fun selectTeam(team: NBATeam) {
+        if (_selectedTeam.value.tricode != team.tricode) {
+            _selectedTeam.value = team
+            refreshGame()
+        }
     }
 
     /**
@@ -46,8 +61,9 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
      */
     private suspend fun fetchGameData() {
         _gameState.value = GameState.Loading
+        val teamTricode = _selectedTeam.value.tricode
 
-        repository.getTodaysGswGame()
+        repository.getTodaysTeamGame(teamTricode)
             .onSuccess { todaysGameResult ->
                 val scoreboard = todaysGameResult.first
                 val game = todaysGameResult.second
@@ -81,7 +97,9 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
      * Fetch next upcoming game and show it
      */
     private suspend fun fetchAndShowNextGame() {
-        repository.getNextGswGame()
+        val teamTricode = _selectedTeam.value.tricode
+
+        repository.getNextTeamGame(teamTricode)
             .onSuccess { scheduledGame ->
                 if (scheduledGame != null) {
                     val game = repository.scheduledGameToGame(scheduledGame)
@@ -146,8 +164,9 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
      * Fetch worm data for completed game
      */
     private suspend fun fetchWormDataForFinalGame(game: `in`.anupcshan.gswtracker.data.model.Game) {
-        val isGswHome = repository.isGswHome(game)
-        repository.getWormData(game.gameId, isGswHome)
+        val teamTricode = _selectedTeam.value.tricode
+        val isTeamHome = repository.isTeamHome(game, teamTricode)
+        repository.getWormData(game.gameId, isTeamHome)
             .onSuccess { wormData ->
                 _gameState.value = GameState.GameFinal(
                     game = game,
@@ -167,8 +186,9 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
      * Fetch worm data for live game
      */
     private suspend fun fetchWormData(game: `in`.anupcshan.gswtracker.data.model.Game) {
-        val isGswHome = repository.isGswHome(game)
-        repository.getWormData(game.gameId, isGswHome)
+        val teamTricode = _selectedTeam.value.tricode
+        val isTeamHome = repository.isTeamHome(game, teamTricode)
+        repository.getWormData(game.gameId, isTeamHome)
             .onSuccess { wormData ->
                 val currentState = _gameState.value
                 if (currentState is GameState.GameLive) {

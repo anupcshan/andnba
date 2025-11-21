@@ -21,19 +21,19 @@ class GameRepository(private val apiService: NbaApiService) {
 
     companion object {
         private const val TAG = "GameRepository"
-        const val GSW_TEAM_CODE = "GSW"
     }
 
     /**
-     * Get today's Warriors game, if any
+     * Get today's game for specified team, if any
      * Also fetches arena information from boxscore
+     * @param teamTricode The team's 3-letter code (e.g., "GSW", "LAL")
      * @return Pair of (Scoreboard, Game?) - includes scoreboard for date checking
      */
-    suspend fun getTodaysGswGame(): Result<Pair<`in`.anupcshan.gswtracker.data.model.Scoreboard, Game?>> {
+    suspend fun getTodaysTeamGame(teamTricode: String): Result<Pair<`in`.anupcshan.gswtracker.data.model.Scoreboard, Game?>> {
         return apiService.getScoreboard().mapCatching { response ->
             val game = response.scoreboard.games.find { game ->
-                game.homeTeam.teamTricode == GSW_TEAM_CODE ||
-                        game.awayTeam.teamTricode == GSW_TEAM_CODE
+                game.homeTeam.teamTricode == teamTricode ||
+                        game.awayTeam.teamTricode == teamTricode
             }
 
             // Fetch arena info if game exists
@@ -109,29 +109,10 @@ class GameRepository(private val apiService: NbaApiService) {
     }
 
     /**
-     * Check if the game involves GSW
+     * Check if a specific team is the home team
      */
-    fun isGswGame(game: Game): Boolean {
-        return game.homeTeam.teamTricode == GSW_TEAM_CODE ||
-                game.awayTeam.teamTricode == GSW_TEAM_CODE
-    }
-
-    /**
-     * Get opponent team for GSW
-     */
-    fun getOpponent(game: Game): String {
-        return if (game.homeTeam.teamTricode == GSW_TEAM_CODE) {
-            game.awayTeam.teamTricode
-        } else {
-            game.homeTeam.teamTricode
-        }
-    }
-
-    /**
-     * Check if GSW is the home team
-     */
-    fun isGswHome(game: Game): Boolean {
-        return game.homeTeam.teamTricode == GSW_TEAM_CODE
+    fun isTeamHome(game: Game, teamTricode: String): Boolean {
+        return game.homeTeam.teamTricode == teamTricode
     }
 
     /**
@@ -154,26 +135,27 @@ class GameRepository(private val apiService: NbaApiService) {
     }
 
     /**
-     * Get the next upcoming Warriors game from the schedule
+     * Get the next upcoming game for specified team from the schedule
+     * @param teamTricode The team's 3-letter code (e.g., "GSW", "LAL")
      * @return ScheduledGame or null if no upcoming game found
      */
-    suspend fun getNextGswGame(): Result<ScheduledGame?> {
+    suspend fun getNextTeamGame(teamTricode: String): Result<ScheduledGame?> {
         return apiService.getSchedule().map { response ->
             val now = Instant.now()
 
-            val gswGames = response.leagueSchedule.gameDates
+            val teamGames = response.leagueSchedule.gameDates
                 .flatMap { gameDate ->
                     gameDate.games.filter { game ->
                         // Skip games with incomplete team data (TBD playoff matchups)
                         game.homeTeam.teamTricode != null && game.awayTeam.teamTricode != null &&
-                        (game.homeTeam.teamTricode == GSW_TEAM_CODE ||
-                                game.awayTeam.teamTricode == GSW_TEAM_CODE)
+                        (game.homeTeam.teamTricode == teamTricode ||
+                                game.awayTeam.teamTricode == teamTricode)
                     }.map { game ->
                         game to parseGameDateTime(game.gameDateTimeUTC)
                     }
                 }
 
-            val futureGames = gswGames.filter { (_, dateTime) ->
+            val futureGames = teamGames.filter { (_, dateTime) ->
                     dateTime != null && dateTime.isAfter(now)
                 }
 

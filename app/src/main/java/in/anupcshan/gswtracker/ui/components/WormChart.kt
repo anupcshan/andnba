@@ -24,7 +24,8 @@ import kotlin.math.max
 @Composable
 fun WormChart(
     wormData: List<WormPoint>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    teamTricode: String = "GSW"
 ) {
     if (wormData.isEmpty()) {
         // Show placeholder when no data
@@ -134,8 +135,8 @@ fun WormChart(
         // Current score differential
         val currentDiff = wormData.lastOrNull()?.scoreDiff ?: 0
         val diffText = when {
-            currentDiff > 0 -> "GSW +$currentDiff"
-            currentDiff < 0 -> "GSW ${currentDiff}"
+            currentDiff > 0 -> "$teamTricode +$currentDiff"
+            currentDiff < 0 -> "$teamTricode ${currentDiff}"
             else -> "Tied"
         }
         Text(
