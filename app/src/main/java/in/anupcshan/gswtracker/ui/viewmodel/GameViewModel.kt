@@ -1,5 +1,6 @@
 package `in`.anupcshan.gswtracker.ui.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import `in`.anupcshan.gswtracker.data.model.GameState
@@ -23,6 +24,10 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     private var lastSeenPeriod: Int = 0
     private var currentGameId: String? = null
 
+    companion object {
+        private const val TAG = "GameViewModel"
+    }
+
     init {
         refreshGame()
     }
@@ -43,19 +48,53 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         _gameState.value = GameState.Loading
 
         repository.getTodaysGswGame()
-            .onSuccess { game ->
-                if (game == null) {
-                    _gameState.value = GameState.NoGameToday(nextGame = null)
-                    stopPolling()
-                } else {
-                    currentGameId = game.gameId
-                    handleGameState(game)
+            .onSuccess { todaysGameResult ->
+                val scoreboard = todaysGameResult.first
+                val game = todaysGameResult.second
+
+                when {
+                    // No game scheduled today
+                    game == null -> {
+                        fetchAndShowNextGame()
+                    }
+                    // Game is final and it's past 10am the next day - show next game instead
+                    game.gameStatus == 3 && repository.isGameStale(scoreboard.gameDate) -> {
+                        fetchAndShowNextGame()
+                    }
+                    // Game exists and isn't stale - show it normally
+                    else -> {
+                        currentGameId = game.gameId
+                        handleGameState(game)
+                    }
                 }
             }
             .onFailure { error ->
+                Log.e(TAG, "fetchGameData: Error fetching game", error)
                 _gameState.value = GameState.Error(
                     error.message ?: "Failed to load game data"
                 )
+                stopPolling()
+            }
+    }
+
+    /**
+     * Fetch next upcoming game and show it
+     */
+    private suspend fun fetchAndShowNextGame() {
+        repository.getNextGswGame()
+            .onSuccess { scheduledGame ->
+                if (scheduledGame != null) {
+                    val game = repository.scheduledGameToGame(scheduledGame)
+                    _gameState.value = GameState.GameScheduled(game)
+                } else {
+                    _gameState.value = GameState.NoGameToday(nextGame = null)
+                }
+                stopPolling()
+            }
+            .onFailure { error ->
+                // If we can't fetch schedule, just show no game
+                Log.e(TAG, "fetchAndShowNextGame: Error fetching schedule", error)
+                _gameState.value = GameState.NoGameToday(nextGame = null)
                 stopPolling()
             }
     }

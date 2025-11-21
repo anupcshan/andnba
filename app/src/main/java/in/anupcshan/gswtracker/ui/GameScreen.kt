@@ -116,6 +116,13 @@ fun ScheduledGameView(game: Game) {
             )
             Spacer(modifier = Modifier.height(4.dp))
         }
+        // Show game date and time
+        Text(
+            text = getGameDateDisplay(game),
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = game.gameStatusText,
             style = MaterialTheme.typography.bodyMedium,
@@ -454,5 +461,26 @@ private fun getGameTitle(game: Game): String {
         "🏀 Warriors vs ${getOpponentName(game)}"
     } else {
         "🏀 Warriors @ ${getOpponentName(game)}"
+    }
+}
+
+private fun getGameDateDisplay(game: Game): String {
+    // Try to parse the gameCode to extract the date
+    // gameCode format: "YYYYMMDD/TEAMTEAM" (e.g., "20251122/GSWPOR")
+    return try {
+        val datePart = game.gameCode.split("/").firstOrNull()
+        if (datePart != null && datePart.length == 8) {
+            val year = datePart.substring(0, 4).toInt()
+            val month = datePart.substring(4, 6).toInt()
+            val day = datePart.substring(6, 8).toInt()
+
+            val date = java.time.LocalDate.of(year, month, day)
+            val formatter = java.time.format.DateTimeFormatter.ofPattern("EEEE, MMM d")
+            date.format(formatter)
+        } else {
+            ""
+        }
+    } catch (e: Exception) {
+        ""
     }
 }

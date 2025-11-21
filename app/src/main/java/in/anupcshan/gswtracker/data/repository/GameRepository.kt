@@ -1,9 +1,18 @@
 package `in`.anupcshan.gswtracker.data.repository
 
+import android.util.Log
 import `in`.anupcshan.gswtracker.data.api.NbaApiService
 import `in`.anupcshan.gswtracker.data.model.Game
 import `in`.anupcshan.gswtracker.data.model.GameAction
+import `in`.anupcshan.gswtracker.data.model.ScheduledGame
+import `in`.anupcshan.gswtracker.data.model.Team
 import `in`.anupcshan.gswtracker.data.model.WormPoint
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 
 /**
  * Repository for fetching and processing NBA game data
@@ -11,14 +20,16 @@ import `in`.anupcshan.gswtracker.data.model.WormPoint
 class GameRepository(private val apiService: NbaApiService) {
 
     companion object {
+        private const val TAG = "GameRepository"
         const val GSW_TEAM_CODE = "GSW"
     }
 
     /**
      * Get today's Warriors game, if any
      * Also fetches arena information from boxscore
+     * @return Pair of (Scoreboard, Game?) - includes scoreboard for date checking
      */
-    suspend fun getTodaysGswGame(): Result<Game?> {
+    suspend fun getTodaysGswGame(): Result<Pair<`in`.anupcshan.gswtracker.data.model.Scoreboard, Game?>> {
         return apiService.getScoreboard().mapCatching { response ->
             val game = response.scoreboard.games.find { game ->
                 game.homeTeam.teamTricode == GSW_TEAM_CODE ||
@@ -32,7 +43,7 @@ class GameRepository(private val apiService: NbaApiService) {
                 }
             }
 
-            game
+            response.scoreboard to game
         }
     }
 
@@ -121,5 +132,106 @@ class GameRepository(private val apiService: NbaApiService) {
      */
     fun isGswHome(game: Game): Boolean {
         return game.homeTeam.teamTricode == GSW_TEAM_CODE
+    }
+
+    /**
+     * Check if a completed game is stale (past 10am the day after the game)
+     * @param gameDate The game date string from scoreboard (format: "2025-11-19")
+     */
+    fun isGameStale(gameDate: String): Boolean {
+        return try {
+            val gameDateParsed = LocalDate.parse(gameDate)
+            val cutoffDateTime = ZonedDateTime.of(
+                gameDateParsed.plusDays(1),
+                LocalTime.of(10, 0),
+                ZoneId.systemDefault()
+            )
+            val now = ZonedDateTime.now()
+            now.isAfter(cutoffDateTime)
+        } catch (e: Exception) {
+            false // If parsing fails, don't consider it stale
+        }
+    }
+
+    /**
+     * Get the next upcoming Warriors game from the schedule
+     * @return ScheduledGame or null if no upcoming game found
+     */
+    suspend fun getNextGswGame(): Result<ScheduledGame?> {
+        return apiService.getSchedule().map { response ->
+            val now = Instant.now()
+
+            val gswGames = response.leagueSchedule.gameDates
+                .flatMap { gameDate ->
+                    gameDate.games.filter { game ->
+                        // Skip games with incomplete team data (TBD playoff matchups)
+                        game.homeTeam.teamTricode != null && game.awayTeam.teamTricode != null &&
+                        (game.homeTeam.teamTricode == GSW_TEAM_CODE ||
+                                game.awayTeam.teamTricode == GSW_TEAM_CODE)
+                    }.map { game ->
+                        game to parseGameDateTime(game.gameDateTimeUTC)
+                    }
+                }
+
+            val futureGames = gswGames.filter { (_, dateTime) ->
+                    dateTime != null && dateTime.isAfter(now)
+                }
+
+            futureGames.minByOrNull { (_, dateTime) -> dateTime!! }?.first
+        }
+    }
+
+    /**
+     * Parse ISO 8601 datetime string to Instant
+     */
+    private fun parseGameDateTime(dateTimeStr: String): Instant? {
+        return try {
+            Instant.parse(dateTimeStr)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Convert ScheduledGame to Game for displaying in UI
+     */
+    fun scheduledGameToGame(scheduledGame: ScheduledGame): Game {
+        // Format game time for display
+        val gameTime = try {
+            val instant = Instant.parse(scheduledGame.gameDateTimeUTC)
+            val zonedDateTime = instant.atZone(ZoneId.systemDefault())
+            val formatter = DateTimeFormatter.ofPattern("h:mm a z")
+            zonedDateTime.format(formatter)
+        } catch (e: Exception) {
+            "TBD"
+        }
+
+        return Game(
+            gameId = scheduledGame.gameId,
+            gameCode = scheduledGame.gameCode,
+            gameStatus = 1, // Scheduled
+            gameStatusText = gameTime,
+            period = 0,
+            gameClock = "",
+            homeTeam = Team(
+                teamId = scheduledGame.homeTeam.teamId,
+                teamName = scheduledGame.homeTeam.teamName ?: "TBD",
+                teamCity = scheduledGame.homeTeam.teamCity ?: "",
+                teamTricode = scheduledGame.homeTeam.teamTricode ?: "TBD",
+                score = 0,
+                wins = 0,
+                losses = 0
+            ),
+            awayTeam = Team(
+                teamId = scheduledGame.awayTeam.teamId,
+                teamName = scheduledGame.awayTeam.teamName ?: "TBD",
+                teamCity = scheduledGame.awayTeam.teamCity ?: "",
+                teamTricode = scheduledGame.awayTeam.teamTricode ?: "TBD",
+                score = 0,
+                wins = 0,
+                losses = 0
+            ),
+            arenaName = scheduledGame.arenaName
+        )
     }
 }

@@ -1,8 +1,10 @@
 package `in`.anupcshan.gswtracker.data.api
 
+import android.util.Log
 import `in`.anupcshan.gswtracker.data.model.BoxScoreResponse
 import `in`.anupcshan.gswtracker.data.model.PlayByPlayResponse
 import `in`.anupcshan.gswtracker.data.model.ScoreboardResponse
+import `in`.anupcshan.gswtracker.data.model.ScheduleResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -13,6 +15,10 @@ import okhttp3.Request
  * Service for making NBA API calls
  */
 class NbaApiService(private val httpClient: OkHttpClient) {
+
+    companion object {
+        private const val TAG = "NbaApiService"
+    }
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -97,6 +103,42 @@ class NbaApiService(private val httpClient: OkHttpClient) {
                 Result.success(boxScore)
             }
         } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Fetch full season schedule
+     */
+    suspend fun getSchedule(): Result<ScheduleResponse> = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder()
+                .url(NbaApiClient.SCHEDULE_URL)
+                .build()
+
+            httpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    val error = "HTTP ${response.code}: ${response.message}"
+                    Log.e(TAG, "getSchedule: $error")
+                    return@withContext Result.failure(Exception(error))
+                }
+
+                val body = response.body?.string()
+                if (body == null) {
+                    Log.e(TAG, "getSchedule: Empty response body")
+                    return@withContext Result.failure(Exception("Empty response body"))
+                }
+
+                try {
+                    val schedule = json.decodeFromString<ScheduleResponse>(body)
+                    Result.success(schedule)
+                } catch (e: Exception) {
+                    Log.e(TAG, "getSchedule: JSON parsing error", e)
+                    Result.failure(e)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "getSchedule: Network error", e)
             Result.failure(e)
         }
     }

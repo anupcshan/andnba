@@ -45,3 +45,42 @@ data class Period(
     val periodType: String = "REGULAR",
     val score: Int
 )
+
+// Schedule API models
+@Serializable
+data class ScheduleResponse(
+    val leagueSchedule: LeagueSchedule
+)
+
+@Serializable
+data class LeagueSchedule(
+    val seasonYear: String,
+    val gameDates: List<GameDate>
+)
+
+@Serializable
+data class GameDate(
+    val gameDate: String, // Format: "MM/DD/YYYY HH:MM:SS"
+    val games: List<ScheduledGame>
+)
+
+@Serializable
+data class ScheduledGame(
+    val gameId: String,
+    val gameCode: String,
+    val gameLabel: String? = null,
+    val gameDateTimeUTC: String, // ISO 8601 format
+    val homeTeam: ScheduledTeam,
+    val awayTeam: ScheduledTeam,
+    val arenaName: String? = null,
+    val arenaCity: String? = null,
+    val arenaState: String? = null
+)
+
+@Serializable
+data class ScheduledTeam(
+    val teamId: Int,
+    val teamName: String? = null,
+    val teamCity: String? = null,
+    val teamTricode: String? = null
+)

@@ -48,6 +48,7 @@ class NbaApiClient(context: Context) {
     companion object {
         const val BASE_URL = "https://cdn.nba.com/static/json/liveData"
         const val SCOREBOARD_URL = "$BASE_URL/scoreboard/todaysScoreboard_00.json"
+        const val SCHEDULE_URL = "https://cdn.nba.com/static/json/staticData/scheduleLeagueV2.json"
 
         fun getPlayByPlayUrl(gameId: String): String {
             return "$BASE_URL/playbyplay/playbyplay_$gameId.json"
