@@ -1,0 +1,50 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Background circle -->
+    <path
+        android:fillColor="#1D428A"
+        android:pathData="M54,54m-30,0a30,30 0,1 1,60 0a30,30 0,1 1,-60 0"/>
+
+    <group
+        android:translateX="54"
+        android:translateY="54">
+
+        <!-- Clip to circle -->
+        <clip-path
+            android:pathData="M0,0m-30,0a30,30 0,1 1,60 0a30,30 0,1 1,-60 0"/>
+
+        <!-- Vertical line -->
+        <path
+            android:strokeColor="#FFC72C"
+            android:strokeWidth="2"
+            android:strokeLineCap="round"
+            android:pathData="M0,-30 L0,30"/>
+
+        <!-- Horizontal line -->
+        <path
+            android:strokeColor="#FFC72C"
+            android:strokeWidth="2"
+            android:strokeLineCap="round"
+            android:pathData="M-30,0 L30,0"/>
+
+        <!-- Left arc -->
+        <path
+            android:fillColor="@android:color/transparent"
+            android:strokeColor="#FFC72C"
+            android:strokeWidth="2"
+            android:strokeLineCap="round"
+            android:pathData="M -18,-30 Q -30,0 -18,30"/>
+
+        <!-- Right arc -->
+        <path
+            android:fillColor="@android:color/transparent"
+            android:strokeColor="#FFC72C"
+            android:strokeWidth="2"
+            android:strokeLineCap="round"
+            android:pathData="M 18,-30 Q 30,0 18,30"/>
+    </group>
+</vector>
