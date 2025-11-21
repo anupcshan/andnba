@@ -116,15 +116,22 @@ fun WormChart(
         }
 
         // X-axis labels (Quarter markers)
+        val maxPeriod = wormData.maxOfOrNull { it.period } ?: 4
+        val numLabels = maxOf(4, maxPeriod)
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 40.dp, end = 40.dp, top = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            for (quarter in 1..4) {
+            for (period in 1..numLabels) {
                 Text(
-                    text = "Q$quarter",
+                    text = when {
+                        period <= 4 -> "Q$period"
+                        period == 5 -> "OT"
+                        else -> "${period - 4}OT"
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant

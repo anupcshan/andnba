@@ -208,7 +208,7 @@ fun LiveGameView(game: Game, wormData: List<`in`.anupcshan.gswtracker.data.model
             Spacer(modifier = Modifier.height(4.dp))
         }
         Text(
-            text = "Q${game.period} ${game.gameClock}",
+            text = "${getPeriodDisplay(game.period)} ${game.gameClock}",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -284,7 +284,7 @@ fun FinalGameView(game: Game, wormData: List<`in`.anupcshan.gswtracker.data.mode
             Spacer(modifier = Modifier.height(4.dp))
         }
         Text(
-            text = "Final",
+            text = if (game.period > 4) "Final ${getPeriodDisplay(game.period)}" else "Final",
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -397,6 +397,13 @@ fun QuarterBreakdown(game: Game, selectedTeam: NBATeam) {
     val teamPeriods = if (isTeamHome) game.homeTeam.periods else game.awayTeam.periods
     val oppPeriods = if (isTeamHome) game.awayTeam.periods else game.homeTeam.periods
 
+    // Determine max periods (includes OT)
+    val maxPeriod = maxOf(
+        teamPeriods.maxOfOrNull { it.period } ?: 4,
+        oppPeriods.maxOfOrNull { it.period } ?: 4,
+        4 // Always show at least 4 quarters
+    )
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -413,9 +420,9 @@ fun QuarterBreakdown(game: Game, selectedTeam: NBATeam) {
                 modifier = Modifier.weight(0.3f),
                 style = MaterialTheme.typography.bodyMedium
             )
-            for (i in 1..4) {
+            for (i in 1..maxPeriod) {
                 Text(
-                    text = "Q$i",
+                    text = getPeriodLabel(i),
                     modifier = Modifier.weight(0.175f),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
@@ -436,7 +443,7 @@ fun QuarterBreakdown(game: Game, selectedTeam: NBATeam) {
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
-            for (i in 1..4) {
+            for (i in 1..maxPeriod) {
                 val score = teamPeriods.find { it.period == i }?.score?.toString() ?: "--"
                 Text(
                     text = score,
@@ -457,7 +464,7 @@ fun QuarterBreakdown(game: Game, selectedTeam: NBATeam) {
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
-            for (i in 1..4) {
+            for (i in 1..maxPeriod) {
                 val score = oppPeriods.find { it.period == i }?.score?.toString() ?: "--"
                 Text(
                     text = score,
@@ -512,6 +519,22 @@ private fun getGameDateDisplay(game: Game): String {
         }
     } catch (e: Exception) {
         ""
+    }
+}
+
+private fun getPeriodDisplay(period: Int): String {
+    return when {
+        period <= 4 -> "Q$period"
+        period == 5 -> "OT"
+        else -> "${period - 4}OT"
+    }
+}
+
+private fun getPeriodLabel(period: Int): String {
+    return when {
+        period <= 4 -> "Q$period"
+        period == 5 -> "OT"
+        else -> "${period - 4}OT"
     }
 }
 
