@@ -29,10 +29,22 @@ class NbaApiClient(context: Context) {
     }
 
     private val cacheInterceptor = okhttp3.Interceptor { chain ->
-        val response = chain.proceed(chain.request())
-        // Force cache with 60s TTL since NBA CDN doesn't send Cache-Control headers
+        val request = chain.request()
+        val response = chain.proceed(request)
+
+        // Apply different cache TTL based on endpoint
+        // Box score: 24 hours (arena name never changes for a game)
+        // Play-by-play: 5 minutes (quarter data doesn't change, allows app reopen)
+        // Scoreboard: 60 seconds (needs to be fresh for live updates)
+        val url = request.url.toString()
+        val maxAge = when {
+            url.contains("boxscore") -> 86400 // 24 hours
+            url.contains("playbyplay") -> 300 // 5 minutes
+            else -> 60 // 1 minute (scoreboard, schedule)
+        }
+
         response.newBuilder()
-            .header("Cache-Control", "public, max-age=60")
+            .header("Cache-Control", "public, max-age=$maxAge")
             .removeHeader("Pragma")
             .build()
     }

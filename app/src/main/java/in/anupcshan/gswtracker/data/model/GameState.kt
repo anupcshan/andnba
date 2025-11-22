@@ -12,12 +12,14 @@ sealed class GameState {
 
     data class GameLive(
         val game: Game,
-        val wormData: List<WormPoint> = emptyList()
+        val wormData: List<WormPoint> = emptyList(),
+        val lastFetchedPeriod: Int = 0
     ) : GameState()
 
     data class GameFinal(
         val game: Game,
-        val wormData: List<WormPoint>
+        val wormData: List<WormPoint>,
+        val lastFetchedPeriod: Int = 0
     ) : GameState()
 
     data class Error(val message: String) : GameState()

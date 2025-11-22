@@ -32,7 +32,6 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     val lastUpdateTime: StateFlow<Long?> = _lastUpdateTime.asStateFlow()
 
     private var pollingJob: Job? = null
-    private var lastSeenPeriod: Int = 0
     private var currentGameId: String? = null
 
     companion object {
@@ -135,14 +134,33 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 stopPolling()
             }
             2 -> {
-                // Game live
-                fetchWormDataIfNeeded(game)
+                // Game live - try to restore from cache first
+                val teamTricode = _selectedTeam.value.tricode
+                val isTeamHome = repository.isTeamHome(game, teamTricode)
+
+                // Try restoring from HTTP cache (survives process restart)
+                val cached = repository.tryRestoreWormDataFromCache(game.gameId, isTeamHome)
+                    .getOrNull()
+
+                val (wormData, lastFetched) = if (cached != null) {
+                    // Cache hit - use restored data
+                    cached.first to cached.second
+                } else {
+                    // Cache miss - start fresh
+                    val currentState = gameState.value
+                    val currentWormData = (currentState as? GameState.GameLive)?.wormData ?: emptyList()
+                    val currentLastFetched = (currentState as? GameState.GameLive)?.lastFetchedPeriod ?: 0
+                    currentWormData to currentLastFetched
+                }
+
                 _gameState.value = GameState.GameLive(
                     game = game,
-                    wormData = (gameState.value as? GameState.GameLive)?.wormData ?: emptyList()
+                    wormData = wormData,
+                    lastFetchedPeriod = lastFetched
                 )
+
+                fetchWormDataIfNeeded(game)
                 startPollingIfNeeded()
-                checkForQuarterTransition(game)
             }
             3 -> {
                 // Game final
@@ -157,13 +175,16 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     }
 
     /**
-     * Fetch worm data if quarter has changed
+     * Fetch worm data if period has changed since last fetch
+     * This ensures we have worm data even when opening the app mid-game
      */
     private suspend fun fetchWormDataIfNeeded(game: `in`.anupcshan.gswtracker.data.model.Game) {
-        if (game.period > lastSeenPeriod) {
-            // New quarter started - fetch updated play-by-play
+        val currentState = gameState.value
+        val lastFetched = (currentState as? GameState.GameLive)?.lastFetchedPeriod ?: 0
+
+        if (game.period != lastFetched && game.period > 0) {
+            // Period changed or first fetch - get updated play-by-play
             fetchWormData(game)
-            lastSeenPeriod = game.period
         }
     }
 
@@ -177,14 +198,16 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             .onSuccess { wormData ->
                 _gameState.value = GameState.GameFinal(
                     game = game,
-                    wormData = wormData
+                    wormData = wormData,
+                    lastFetchedPeriod = game.period
                 )
             }
             .onFailure { error ->
                 // Show game as final even if worm data fails
                 _gameState.value = GameState.GameFinal(
                     game = game,
-                    wormData = emptyList()
+                    wormData = emptyList(),
+                    lastFetchedPeriod = 0
                 )
             }
     }
@@ -199,21 +222,15 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             .onSuccess { wormData ->
                 val currentState = _gameState.value
                 if (currentState is GameState.GameLive) {
-                    _gameState.value = currentState.copy(wormData = wormData)
+                    _gameState.value = currentState.copy(
+                        wormData = wormData,
+                        lastFetchedPeriod = game.period
+                    )
                 }
             }
             .onFailure {
                 // Silently fail - keep showing live game without worm data
             }
-    }
-
-    /**
-     * Check if quarter has transitioned
-     */
-    private fun checkForQuarterTransition(game: `in`.anupcshan.gswtracker.data.model.Game) {
-        if (game.period > lastSeenPeriod) {
-            lastSeenPeriod = game.period
-        }
     }
 
     /**

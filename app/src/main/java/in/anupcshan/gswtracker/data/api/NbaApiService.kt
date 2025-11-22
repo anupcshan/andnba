@@ -9,6 +9,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import okhttp3.CacheControl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
@@ -81,6 +82,42 @@ class NbaApiService(
             }
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    /**
+     * Try to get play-by-play data from cache only (no network call)
+     * Accepts stale cache to restore last known worm state across app restarts
+     * Caller is responsible for checking if period changed and refetching if needed
+     * Returns null if cache miss
+     */
+    suspend fun getPlayByPlayFromCache(gameId: String): Result<PlayByPlayResponse?> = withContext(ioDispatcher) {
+        try {
+            val request = Request.Builder()
+                .url(NbaApiClient.getPlayByPlayUrl(gameId))
+                .cacheControl(
+                    CacheControl.Builder()
+                        .onlyIfCached()
+                        .maxStale(Integer.MAX_VALUE, java.util.concurrent.TimeUnit.SECONDS)
+                        .build()
+                )
+                .build()
+
+            httpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    // Cache miss or would require network
+                    return@withContext Result.success(null)
+                }
+
+                val body = response.body?.string()
+                    ?: return@withContext Result.success(null)
+
+                val playByPlay = json.decodeFromString<PlayByPlayResponse>(body)
+                Result.success(playByPlay)
+            }
+        } catch (e: Exception) {
+            // Cache miss or error
+            Result.success(null)
         }
     }
 

@@ -80,6 +80,24 @@ class GameRepository(
     }
 
     /**
+     * Try to restore worm data from HTTP cache (no network call)
+     * Returns pair of (wormData, lastFetchedPeriod) if cache hit, null otherwise
+     * This allows restoring state across app restarts without refetching
+     */
+    suspend fun tryRestoreWormDataFromCache(gameId: String, isGswHome: Boolean): Result<Pair<List<WormPoint>, Int>?> {
+        return apiService.getPlayByPlayFromCache(gameId).map { response ->
+            if (response == null) {
+                // Cache miss
+                null
+            } else {
+                val wormData = processPlayByPlayToWorm(response.game.actions, isGswHome)
+                val lastPeriod = response.game.actions.maxOfOrNull { it.period } ?: 0
+                wormData to lastPeriod
+            }
+        }
+    }
+
+    /**
      * Process play-by-play actions into worm chart data points
      * Filters for scoring events and converts to time-series data
      * @param isGswHome Whether GSW is the home team (affects score differential calculation)
