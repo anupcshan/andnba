@@ -5,6 +5,7 @@ import `in`.anupcshan.gswtracker.data.model.BoxScoreResponse
 import `in`.anupcshan.gswtracker.data.model.PlayByPlayResponse
 import `in`.anupcshan.gswtracker.data.model.ScoreboardResponse
 import `in`.anupcshan.gswtracker.data.model.ScheduleResponse
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -14,7 +15,10 @@ import okhttp3.Request
 /**
  * Service for making NBA API calls
  */
-class NbaApiService(private val httpClient: OkHttpClient) {
+class NbaApiService(
+    private val httpClient: OkHttpClient,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+) {
 
     companion object {
         private const val TAG = "NbaApiService"
@@ -29,7 +33,7 @@ class NbaApiService(private val httpClient: OkHttpClient) {
     /**
      * Fetch today's scoreboard
      */
-    suspend fun getScoreboard(): Result<ScoreboardResponse> = withContext(Dispatchers.IO) {
+    suspend fun getScoreboard(): Result<ScoreboardResponse> = withContext(ioDispatcher) {
         try {
             val request = Request.Builder()
                 .url(NbaApiClient.SCOREBOARD_URL)
@@ -56,7 +60,7 @@ class NbaApiService(private val httpClient: OkHttpClient) {
     /**
      * Fetch play-by-play data for a specific game
      */
-    suspend fun getPlayByPlay(gameId: String): Result<PlayByPlayResponse> = withContext(Dispatchers.IO) {
+    suspend fun getPlayByPlay(gameId: String): Result<PlayByPlayResponse> = withContext(ioDispatcher) {
         try {
             val request = Request.Builder()
                 .url(NbaApiClient.getPlayByPlayUrl(gameId))
@@ -83,7 +87,7 @@ class NbaApiService(private val httpClient: OkHttpClient) {
     /**
      * Fetch boxscore data for a specific game (includes arena info)
      */
-    suspend fun getBoxScore(gameId: String): Result<BoxScoreResponse> = withContext(Dispatchers.IO) {
+    suspend fun getBoxScore(gameId: String): Result<BoxScoreResponse> = withContext(ioDispatcher) {
         try {
             val request = Request.Builder()
                 .url(NbaApiClient.getBoxScoreUrl(gameId))
@@ -110,7 +114,7 @@ class NbaApiService(private val httpClient: OkHttpClient) {
     /**
      * Fetch full season schedule
      */
-    suspend fun getSchedule(): Result<ScheduleResponse> = withContext(Dispatchers.IO) {
+    suspend fun getSchedule(): Result<ScheduleResponse> = withContext(ioDispatcher) {
         try {
             val request = Request.Builder()
                 .url(NbaApiClient.SCHEDULE_URL)
