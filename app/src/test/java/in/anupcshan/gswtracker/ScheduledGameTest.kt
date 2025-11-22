@@ -97,7 +97,11 @@ class ScheduledGameTest {
 
         // Pass test dispatcher to NbaApiService so IO operations use test dispatcher
         val apiService = NbaApiService(httpClient, testDispatcher)
-        val repository = GameRepository(apiService)
+
+        // Mock time to match when the scenario was captured (Nov 21, 2025 00:26 UTC)
+        val mockTime = java.time.Instant.parse("2025-11-21T00:26:00Z")
+        val repository = GameRepository(apiService, currentTimeProvider = { mockTime })
+
         viewModel = GameViewModel(repository)
     }
 
@@ -109,7 +113,7 @@ class ScheduledGameTest {
 
     @Test
     fun `scheduled game shows correct state for GSW vs POR`() = runTest {
-        // With injected test dispatcher, all coroutines run on test scheduler
+        // With injected test dispatcher and mocked time, all coroutines run deterministically
         advanceUntilIdle()
 
         // Verify the state is GameScheduled
@@ -127,6 +131,11 @@ class ScheduledGameTest {
         // Verify team names
         assertEquals("Warriors", game.homeTeam.teamName)
         assertEquals("Trail Blazers", game.awayTeam.teamName)
+
+        // Verify the game time is formatted in local timezone (not ET)
+        assert(!game.gameStatusText.contains(" ET")) {
+            "Game time should not be in ET format, got: ${game.gameStatusText}"
+        }
     }
 
     @Test

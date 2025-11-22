@@ -21,6 +21,7 @@ data class Game(
     val gameStatusText: String,
     val period: Int,
     val gameClock: String,
+    val gameTimeUTC: String? = null, // ISO 8601 format for scheduled games
     val homeTeam: Team,
     val awayTeam: Team,
     // Arena info (fetched from boxscore)

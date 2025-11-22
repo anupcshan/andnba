@@ -18,6 +18,7 @@ import `in`.anupcshan.gswtracker.data.model.Game
 import `in`.anupcshan.gswtracker.data.model.GameState
 import `in`.anupcshan.gswtracker.data.model.NBATeam
 import `in`.anupcshan.gswtracker.data.model.NBATeams
+import `in`.anupcshan.gswtracker.data.repository.GameRepository
 import `in`.anupcshan.gswtracker.ui.components.WormChart
 import `in`.anupcshan.gswtracker.ui.viewmodel.GameViewModel
 import com.google.accompanist.swiperefresh.SwipeRefresh
@@ -150,7 +151,7 @@ fun ScheduledGameView(game: Game, selectedTeam: NBATeam) {
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = game.gameStatusText,
+            text = GameRepository.formatGameTime(game.gameTimeUTC),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

@@ -17,10 +17,31 @@ import java.time.format.DateTimeFormatter
 /**
  * Repository for fetching and processing NBA game data
  */
-class GameRepository(private val apiService: NbaApiService) {
+class GameRepository(
+    private val apiService: NbaApiService,
+    private val currentTimeProvider: () -> Instant = { Instant.now() }
+) {
 
     companion object {
         private const val TAG = "GameRepository"
+
+        /**
+         * Format UTC time to local time string
+         * @param utcTimeStr ISO 8601 UTC time string
+         * @return Formatted local time (e.g., "7:00 PM PST")
+         */
+        fun formatGameTime(utcTimeStr: String?): String {
+            if (utcTimeStr == null) return "TBD"
+
+            return try {
+                val instant = Instant.parse(utcTimeStr)
+                val zonedDateTime = instant.atZone(ZoneId.systemDefault())
+                val formatter = DateTimeFormatter.ofPattern("h:mm a z")
+                zonedDateTime.format(formatter)
+            } catch (e: Exception) {
+                "TBD"
+            }
+        }
     }
 
     /**
@@ -141,7 +162,7 @@ class GameRepository(private val apiService: NbaApiService) {
      */
     suspend fun getNextTeamGame(teamTricode: String): Result<ScheduledGame?> {
         return apiService.getSchedule().map { response ->
-            val now = Instant.now()
+            val now = currentTimeProvider()
 
             val teamGames = response.leagueSchedule.gameDates
                 .flatMap { gameDate ->
@@ -178,23 +199,14 @@ class GameRepository(private val apiService: NbaApiService) {
      * Convert ScheduledGame to Game for displaying in UI
      */
     fun scheduledGameToGame(scheduledGame: ScheduledGame): Game {
-        // Format game time for display
-        val gameTime = try {
-            val instant = Instant.parse(scheduledGame.gameDateTimeUTC)
-            val zonedDateTime = instant.atZone(ZoneId.systemDefault())
-            val formatter = DateTimeFormatter.ofPattern("h:mm a z")
-            zonedDateTime.format(formatter)
-        } catch (e: Exception) {
-            "TBD"
-        }
-
         return Game(
             gameId = scheduledGame.gameId,
             gameCode = scheduledGame.gameCode,
             gameStatus = 1, // Scheduled
-            gameStatusText = gameTime,
+            gameStatusText = formatGameTime(scheduledGame.gameDateTimeUTC),
             period = 0,
             gameClock = "",
+            gameTimeUTC = scheduledGame.gameDateTimeUTC,
             homeTeam = Team(
                 teamId = scheduledGame.homeTeam.teamId,
                 teamName = scheduledGame.homeTeam.teamName ?: "TBD",
