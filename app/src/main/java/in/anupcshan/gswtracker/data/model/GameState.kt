@@ -19,7 +19,8 @@ sealed class GameState {
     data class GameFinal(
         val game: Game,
         val wormData: List<WormPoint>,
-        val lastFetchedPeriod: Int = 0
+        val lastFetchedPeriod: Int = 0,
+        val nextGame: Game? = null
     ) : GameState()
 
     data class Error(val message: String) : GameState()

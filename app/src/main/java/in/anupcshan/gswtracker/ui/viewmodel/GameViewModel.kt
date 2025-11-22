@@ -194,12 +194,18 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     private suspend fun fetchWormDataForFinalGame(game: `in`.anupcshan.gswtracker.data.model.Game) {
         val teamTricode = _selectedTeam.value.tricode
         val isTeamHome = repository.isTeamHome(game, teamTricode)
+
+        // Fetch next game info
+        val nextGameResult = repository.getNextTeamGame(teamTricode)
+        val nextGame = nextGameResult.getOrNull()?.let { repository.scheduledGameToGame(it) }
+
         repository.getWormData(game.gameId, isTeamHome)
             .onSuccess { wormData ->
                 _gameState.value = GameState.GameFinal(
                     game = game,
                     wormData = wormData,
-                    lastFetchedPeriod = game.period
+                    lastFetchedPeriod = game.period,
+                    nextGame = nextGame
                 )
             }
             .onFailure { error ->
@@ -207,7 +213,8 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 _gameState.value = GameState.GameFinal(
                     game = game,
                     wormData = emptyList(),
-                    lastFetchedPeriod = 0
+                    lastFetchedPeriod = 0,
+                    nextGame = nextGame
                 )
             }
     }

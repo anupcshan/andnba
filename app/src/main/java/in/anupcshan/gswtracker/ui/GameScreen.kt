@@ -2,8 +2,10 @@ package `in`.anupcshan.gswtracker.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -56,7 +58,7 @@ fun GameScreen(viewModel: GameViewModel) {
                     is GameState.NoGameToday -> NoGameView(state.nextGame, selectedTeam)
                     is GameState.GameScheduled -> ScheduledGameView(state.game, selectedTeam)
                     is GameState.GameLive -> LiveGameView(state.game, state.wormData, selectedTeam)
-                    is GameState.GameFinal -> FinalGameView(state.game, state.wormData, selectedTeam)
+                    is GameState.GameFinal -> FinalGameView(state.game, state.wormData, state.nextGame, selectedTeam)
                     is GameState.Error -> ErrorView(state.message) { viewModel.refreshGame() }
                 }
 
@@ -125,7 +127,9 @@ fun NoGameView(nextGame: Game?, selectedTeam: NBATeam) {
 @Composable
 fun ScheduledGameView(game: Game, selectedTeam: NBATeam) {
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // Header
@@ -190,7 +194,9 @@ fun ScheduledGameView(game: Game, selectedTeam: NBATeam) {
 @Composable
 fun LiveGameView(game: Game, wormData: List<`in`.anupcshan.gswtracker.data.model.WormPoint> = emptyList(), selectedTeam: NBATeam) {
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // Header
@@ -264,9 +270,11 @@ fun LiveGameView(game: Game, wormData: List<`in`.anupcshan.gswtracker.data.model
 }
 
 @Composable
-fun FinalGameView(game: Game, wormData: List<`in`.anupcshan.gswtracker.data.model.WormPoint> = emptyList(), selectedTeam: NBATeam) {
+fun FinalGameView(game: Game, wormData: List<`in`.anupcshan.gswtracker.data.model.WormPoint> = emptyList(), nextGame: Game?, selectedTeam: NBATeam) {
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // Header
@@ -326,6 +334,34 @@ fun FinalGameView(game: Game, wormData: List<`in`.anupcshan.gswtracker.data.mode
             fontWeight = FontWeight.Bold,
             color = if (teamWon) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
         )
+
+        // Next game info
+        nextGame?.let {
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "Next game:",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "${selectedTeam.name} vs ${getOpponentName(it, selectedTeam.tricode)}",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = getGameDateDisplay(it),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = GameRepository.formatGameTime(it.gameTimeUTC),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
 
         Spacer(modifier = Modifier.height(32.dp))
 
