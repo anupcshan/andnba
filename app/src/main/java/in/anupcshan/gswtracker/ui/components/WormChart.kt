@@ -27,6 +27,7 @@ fun WormChart(
     modifier: Modifier = Modifier,
     teamTricode: String = "GSW"
 ) {
+    val separatorColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
     if (wormData.isEmpty()) {
         // Show placeholder when no data
         Box(
@@ -77,6 +78,28 @@ fun WormChart(
                 strokeWidth = 2f,
                 pathEffect = dashEffect
             )
+
+            // Quarter separator lines
+            val quarterLength = 720 // 12 minutes per quarter in seconds
+            val firstGameTime = wormData.first().gameTimeSeconds
+            val lastGameTime = wormData.last().gameTimeSeconds
+            val maxPeriodInData = wormData.maxOfOrNull { it.period } ?: 4
+
+            // Draw lines at end of each quarter (Q1, Q2, Q3, ...)
+            for (period in 1 until maxPeriodInData) {
+                val quarterEndTime = period * quarterLength
+
+                // Only draw if this time is within our data range
+                if (quarterEndTime > firstGameTime && quarterEndTime < lastGameTime) {
+                    val x = padding + (quarterEndTime - firstGameTime) * xScale
+                    drawLine(
+                        color = separatorColor,
+                        start = Offset(x, padding),
+                        end = Offset(x, height - padding),
+                        strokeWidth = 2f
+                    )
+                }
+            }
 
             // Draw the worm line with segments
             if (wormData.size > 1) {
