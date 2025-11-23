@@ -9,12 +9,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import `in`.anupcshan.gswtracker.data.model.WormPoint
 import `in`.anupcshan.gswtracker.ui.theme.GswLosing
 import `in`.anupcshan.gswtracker.ui.theme.GswWinning
@@ -46,7 +42,7 @@ fun WormChart(
     Column(modifier = modifier) {
         // Calculate chart bounds
         val maxScoreDiff = wormData.maxOfOrNull { abs(it.scoreDiff) } ?: 10
-        val yAxisMax = max(10, ((maxScoreDiff + 5) / 10) * 10) // Round up to nearest 10
+        val yAxisMax = maxScoreDiff + 1 // Add 1 point buffer to avoid drawing on edge
 
         Canvas(
             modifier = Modifier
@@ -61,6 +57,39 @@ fun WormChart(
             val xScale = (width - padding * 2) / (wormData.last().gameTimeSeconds - wormData.first().gameTimeSeconds).coerceAtLeast(1)
             val yScale = (height - padding * 2) / (yAxisMax * 2)
 
+            // Draw alternating background colors for quarters
+            val quarterLength = 720 // 12 minutes per quarter in seconds
+            val firstGameTime = wormData.first().gameTimeSeconds
+            val lastGameTime = wormData.last().gameTimeSeconds
+            val maxPeriodInData = wormData.maxOfOrNull { it.period } ?: 4
+
+            for (period in 1..maxPeriodInData) {
+                val quarterStartTime = (period - 1) * quarterLength
+                val quarterEndTime = period * quarterLength
+
+                // Only draw if this quarter overlaps with our data range
+                if (quarterEndTime > firstGameTime && quarterStartTime < lastGameTime) {
+                    val startX = padding + maxOf(0, quarterStartTime - firstGameTime) * xScale
+                    val endX = padding + minOf(lastGameTime - firstGameTime, quarterEndTime - firstGameTime) * xScale
+
+                    // Alternate between two subtle background colors
+                    val backgroundColor = if (period % 2 == 1) {
+                        separatorColor.copy(alpha = 0.05f)
+                    } else {
+                        separatorColor.copy(alpha = 0.15f)
+                    }
+
+                    drawRect(
+                        color = backgroundColor,
+                        topLeft = Offset(startX, 0f),
+                        size = androidx.compose.ui.geometry.Size(
+                            width = endX - startX,
+                            height = height
+                        )
+                    )
+                }
+            }
+
             // Zero line (dashed)
             val zeroY = height / 2
             val dashEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
@@ -73,11 +102,6 @@ fun WormChart(
             )
 
             // Quarter separator lines
-            val quarterLength = 720 // 12 minutes per quarter in seconds
-            val firstGameTime = wormData.first().gameTimeSeconds
-            val lastGameTime = wormData.last().gameTimeSeconds
-            val maxPeriodInData = wormData.maxOfOrNull { it.period } ?: 4
-
             // Draw lines at end of each quarter (Q1, Q2, Q3, ...)
             for (period in 1 until maxPeriodInData) {
                 val quarterEndTime = period * quarterLength
@@ -125,34 +149,6 @@ fun WormChart(
                 }
             }
 
-            // Draw Y-axis labels
-            val yLabels = listOf(yAxisMax, 0, -yAxisMax)
-            // Note: We can't draw text directly in Canvas in Compose,
-            // so we'll just draw the axis lines
-        }
-
-        // X-axis labels (Quarter markers)
-        val maxPeriod = wormData.maxOfOrNull { it.period } ?: 4
-        val numLabels = maxOf(4, maxPeriod)
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 40.dp, end = 40.dp, top = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            for (period in 1..numLabels) {
-                Text(
-                    text = when {
-                        period <= 4 -> "Q$period"
-                        period == 5 -> "OT"
-                        else -> "${period - 4}OT"
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
     }
 }
