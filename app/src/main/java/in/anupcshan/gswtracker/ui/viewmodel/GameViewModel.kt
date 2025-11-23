@@ -39,7 +39,9 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     }
 
     init {
-        refreshGame()
+        viewModelScope.launch {
+            fetchGameData(showLoading = true)
+        }
     }
 
     /**
@@ -57,15 +59,17 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
      */
     fun refreshGame() {
         viewModelScope.launch {
-            fetchGameData()
+            fetchGameData(showLoading = true)
         }
     }
 
     /**
      * Fetch today's game and determine state
      */
-    private suspend fun fetchGameData() {
-        _gameState.value = GameState.Loading
+    private suspend fun fetchGameData(showLoading: Boolean = false) {
+        if (showLoading) {
+            _gameState.value = GameState.Loading
+        }
         _lastUpdateTime.value = System.currentTimeMillis()
         val teamTricode = _selectedTeam.value.tricode
 
