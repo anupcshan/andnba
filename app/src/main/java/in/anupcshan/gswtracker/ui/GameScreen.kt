@@ -1,6 +1,7 @@
 package `in`.anupcshan.gswtracker.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -75,6 +76,35 @@ fun GameScreen(viewModel: GameViewModel) {
 }
 
 @Composable
+fun OutlinedSection(
+    modifier: Modifier = Modifier,
+    title: String? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant,
+                shape = RoundedCornerShape(12.dp)
+            )
+            .padding(16.dp)
+    ) {
+        title?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+        content()
+    }
+}
+
+@Composable
 fun LoadingView() {
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -109,17 +139,34 @@ fun NoGameView(nextGame: Game?, selectedTeam: NBATeam) {
         )
         nextGame?.let {
             Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                text = "Next game:",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "${selectedTeam.name} vs ${getOpponentName(it, selectedTeam.tricode)}",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
+            OutlinedSection(modifier = Modifier.fillMaxWidth(0.9f)) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "🕐 ${selectedTeam.name} vs ${getOpponentName(it, selectedTeam.tricode)}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(32.dp)
+                    ) {
+                        Text(
+                            text = getGameDateDisplay(it),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = GameRepository.formatGameTime(it.gameTimeUTC),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -132,62 +179,66 @@ fun ScheduledGameView(game: Game, selectedTeam: NBATeam) {
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Header
-        Text(
-            text = getGameTitle(game, selectedTeam),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.SemiBold
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        game.arenaName?.let { arena ->
-            Text(
-                text = arena,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(4.dp))
+        // Game Details & Matchup Section
+        OutlinedSection {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = getGameTitle(game, selectedTeam),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                game.arenaName?.let { arena ->
+                    Text(
+                        text = arena,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+                // Show game date and time
+                Text(
+                    text = getGameDateDisplay(game),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = GameRepository.formatGameTime(game.gameTimeUTC),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Score placeholder
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val isTeamHome = game.homeTeam.teamTricode == selectedTeam.tricode
+                    val teamData = if (isTeamHome) game.homeTeam else game.awayTeam
+                    val oppData = if (isTeamHome) game.awayTeam else game.homeTeam
+
+                    TeamScore(selectedTeam.tricode, "--", "${teamData.wins}-${teamData.losses}")
+                    Text("vs", style = MaterialTheme.typography.bodyLarge)
+                    TeamScore(
+                        getOpponentTricode(game, selectedTeam.tricode),
+                        "--",
+                        "${oppData.wins}-${oppData.losses}"
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Game hasn't started yet",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
-        // Show game date and time
-        Text(
-            text = getGameDateDisplay(game),
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Medium
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = GameRepository.formatGameTime(game.gameTimeUTC),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Score placeholder
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val isTeamHome = game.homeTeam.teamTricode == selectedTeam.tricode
-            val teamData = if (isTeamHome) game.homeTeam else game.awayTeam
-            val oppData = if (isTeamHome) game.awayTeam else game.homeTeam
-
-            TeamScore(selectedTeam.tricode, "--", "${teamData.wins}-${teamData.losses}")
-            Text("vs", style = MaterialTheme.typography.bodyLarge)
-            TeamScore(
-                getOpponentTricode(game, selectedTeam.tricode),
-                "--",
-                "${oppData.wins}-${oppData.losses}"
-            )
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Text(
-            text = "Game hasn't started yet",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
 
@@ -199,72 +250,75 @@ fun LiveGameView(game: Game, wormData: List<`in`.anupcshan.gswtracker.data.model
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Header
-        Text(
-            text = getGameTitle(game, selectedTeam),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.SemiBold
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        game.arenaName?.let { arena ->
-            Text(
-                text = arena,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-        }
-        Text(
-            text = "${getPeriodDisplay(game.period)} ${game.gameClock}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        // Game Header & Score Section
+        OutlinedSection {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = getGameTitle(game, selectedTeam),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                game.arenaName?.let { arena ->
+                    Text(
+                        text = arena,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+                Text(
+                    text = "${getPeriodDisplay(game.period)} ${game.gameClock}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                // Live badge
+                Surface(
+                    color = MaterialTheme.colorScheme.primary,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = "LIVE",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
 
-        Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-        // Score
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val isTeamHome = game.homeTeam.teamTricode == selectedTeam.tricode
-            val teamData = if (isTeamHome) game.homeTeam else game.awayTeam
-            val oppData = if (isTeamHome) game.awayTeam else game.homeTeam
+                // Current Score
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val isTeamHome = game.homeTeam.teamTricode == selectedTeam.tricode
+                    val teamData = if (isTeamHome) game.homeTeam else game.awayTeam
+                    val oppData = if (isTeamHome) game.awayTeam else game.homeTeam
 
-            TeamScore(selectedTeam.tricode, teamData.score.toString(), "${teamData.wins}-${teamData.losses}")
-            Text("vs", style = MaterialTheme.typography.bodyLarge)
-            TeamScore(
-                getOpponentTricode(game, selectedTeam.tricode),
-                oppData.score.toString(),
-                "${oppData.wins}-${oppData.losses}"
-            )
+                    TeamScore(selectedTeam.tricode, teamData.score.toString(), "${teamData.wins}-${teamData.losses}")
+                    Text("vs", style = MaterialTheme.typography.bodyLarge)
+                    TeamScore(
+                        getOpponentTricode(game, selectedTeam.tricode),
+                        oppData.score.toString(),
+                        "${oppData.wins}-${oppData.losses}"
+                    )
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Live badge
-        Surface(
-            color = MaterialTheme.colorScheme.primary,
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text(
-                text = "LIVE",
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Quarter scores
-        QuarterBreakdown(game, selectedTeam)
-
-        // Worm chart (if data available)
-        if (wormData.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(24.dp))
-            WormChart(wormData = wormData, teamTricode = selectedTeam.tricode)
+        // Game Statistics Section
+        OutlinedSection {
+            QuarterBreakdown(game, selectedTeam)
+            // Worm chart (if data available)
+            if (wormData.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                WormChart(wormData = wormData, teamTricode = selectedTeam.tricode)
+            }
         }
     }
 }
@@ -277,100 +331,109 @@ fun FinalGameView(game: Game, wormData: List<`in`.anupcshan.gswtracker.data.mode
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Header
-        Text(
-            text = getGameTitle(game, selectedTeam),
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.SemiBold
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        game.arenaName?.let { arena ->
-            Text(
-                text = arena,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(4.dp))
+        // Game Header & Score Section
+        OutlinedSection {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = getGameTitle(game, selectedTeam),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                game.arenaName?.let { arena ->
+                    Text(
+                        text = arena,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+                Text(
+                    text = if (game.period > 4) "Final ${getPeriodDisplay(game.period)}" else "Final",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Final Score
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val isTeamHome = game.homeTeam.teamTricode == selectedTeam.tricode
+                    val teamData = if (isTeamHome) game.homeTeam else game.awayTeam
+                    val oppData = if (isTeamHome) game.awayTeam else game.homeTeam
+
+                    TeamScore(selectedTeam.tricode, teamData.score.toString(), "${teamData.wins}-${teamData.losses}")
+                    Text("vs", style = MaterialTheme.typography.bodyLarge)
+                    TeamScore(
+                        getOpponentTricode(game, selectedTeam.tricode),
+                        oppData.score.toString(),
+                        "${oppData.wins}-${oppData.losses}"
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Winner text
+                val isTeamHome = game.homeTeam.teamTricode == selectedTeam.tricode
+                val teamScore = if (isTeamHome) game.homeTeam.score else game.awayTeam.score
+                val oppScore = if (isTeamHome) game.awayTeam.score else game.homeTeam.score
+                val teamWon = teamScore > oppScore
+
+                Text(
+                    text = if (teamWon) "${selectedTeam.tricode} Win!" else "${selectedTeam.tricode} Loss",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = if (teamWon) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                )
+            }
         }
-        Text(
-            text = if (game.period > 4) "Final ${getPeriodDisplay(game.period)}" else "Final",
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
 
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Final Score
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val isTeamHome = game.homeTeam.teamTricode == selectedTeam.tricode
-            val teamData = if (isTeamHome) game.homeTeam else game.awayTeam
-            val oppData = if (isTeamHome) game.awayTeam else game.homeTeam
-
-            TeamScore(selectedTeam.tricode, teamData.score.toString(), "${teamData.wins}-${teamData.losses}")
-            Text("vs", style = MaterialTheme.typography.bodyLarge)
-            TeamScore(
-                getOpponentTricode(game, selectedTeam.tricode),
-                oppData.score.toString(),
-                "${oppData.wins}-${oppData.losses}"
-            )
+        // Next Game Section
+        nextGame?.let {
+            Spacer(modifier = Modifier.height(16.dp))
+            OutlinedSection {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "🕐 ${selectedTeam.name} vs ${getOpponentName(it, selectedTeam.tricode)}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(32.dp)
+                    ) {
+                        Text(
+                            text = getGameDateDisplay(it),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = GameRepository.formatGameTime(it.gameTimeUTC),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Winner text
-        val isTeamHome = game.homeTeam.teamTricode == selectedTeam.tricode
-        val teamScore = if (isTeamHome) game.homeTeam.score else game.awayTeam.score
-        val oppScore = if (isTeamHome) game.awayTeam.score else game.homeTeam.score
-        val teamWon = teamScore > oppScore
-
-        Text(
-            text = if (teamWon) "${selectedTeam.tricode} Win!" else "${selectedTeam.tricode} Loss",
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Bold,
-            color = if (teamWon) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-        )
-
-        // Next game info
-        nextGame?.let {
-            Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                text = "Next game:",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "${selectedTeam.name} vs ${getOpponentName(it, selectedTeam.tricode)}",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = getGameDateDisplay(it),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = GameRepository.formatGameTime(it.gameTimeUTC),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        // Game Statistics Section
+        OutlinedSection {
+            QuarterBreakdown(game, selectedTeam)
+            Spacer(modifier = Modifier.height(16.dp))
+            WormChart(wormData = wormData, teamTricode = selectedTeam.tricode)
         }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Quarter scores
-        QuarterBreakdown(game, selectedTeam)
-
-        // Worm chart
-        Spacer(modifier = Modifier.height(24.dp))
-        WormChart(wormData = wormData, teamTricode = selectedTeam.tricode)
     }
 }
 
@@ -442,13 +505,7 @@ fun QuarterBreakdown(game: Game, selectedTeam: NBATeam) {
     )
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                MaterialTheme.colorScheme.surfaceVariant,
-                RoundedCornerShape(8.dp)
-            )
-            .padding(16.dp)
+        modifier = Modifier.fillMaxWidth()
     ) {
         // Header row
         Row(modifier = Modifier.fillMaxWidth()) {

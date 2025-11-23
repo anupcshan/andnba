@@ -44,13 +44,6 @@ fun WormChart(
     }
 
     Column(modifier = modifier) {
-        Text(
-            text = "Score Differential",
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-
         // Calculate chart bounds
         val maxScoreDiff = wormData.maxOfOrNull { abs(it.scoreDiff) } ?: 10
         val yAxisMax = max(10, ((maxScoreDiff + 5) / 10) * 10) // Round up to nearest 10
