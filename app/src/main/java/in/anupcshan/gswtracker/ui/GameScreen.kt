@@ -268,7 +268,7 @@ fun LiveGameView(game: Game, wormData: List<`in`.anupcshan.gswtracker.data.model
                     Spacer(modifier = Modifier.height(4.dp))
                 }
                 Text(
-                    text = "${getPeriodDisplay(game.period)} ${game.gameClock}",
+                    text = game.gameStatusText,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
