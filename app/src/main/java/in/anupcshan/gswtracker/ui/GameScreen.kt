@@ -358,38 +358,30 @@ fun FinalGameView(game: Game, wormData: List<`in`.anupcshan.gswtracker.data.mode
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Final Score
+                val isTeamHome = game.homeTeam.teamTricode == selectedTeam.tricode
+                val teamData = if (isTeamHome) game.homeTeam else game.awayTeam
+                val oppData = if (isTeamHome) game.awayTeam else game.homeTeam
+                val teamWon = teamData.score > oppData.score
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val isTeamHome = game.homeTeam.teamTricode == selectedTeam.tricode
-                    val teamData = if (isTeamHome) game.homeTeam else game.awayTeam
-                    val oppData = if (isTeamHome) game.awayTeam else game.homeTeam
-
-                    TeamScore(selectedTeam.tricode, teamData.score.toString(), "${teamData.wins}-${teamData.losses}")
+                    TeamScore(
+                        teamCode = selectedTeam.tricode,
+                        score = teamData.score.toString(),
+                        record = "${teamData.wins}-${teamData.losses}",
+                        isWinner = teamWon
+                    )
                     Text("vs", style = MaterialTheme.typography.bodyLarge)
                     TeamScore(
-                        getOpponentTricode(game, selectedTeam.tricode),
-                        oppData.score.toString(),
-                        "${oppData.wins}-${oppData.losses}"
+                        teamCode = getOpponentTricode(game, selectedTeam.tricode),
+                        score = oppData.score.toString(),
+                        record = "${oppData.wins}-${oppData.losses}",
+                        isWinner = !teamWon
                     )
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Winner text
-                val isTeamHome = game.homeTeam.teamTricode == selectedTeam.tricode
-                val teamScore = if (isTeamHome) game.homeTeam.score else game.awayTeam.score
-                val oppScore = if (isTeamHome) game.awayTeam.score else game.homeTeam.score
-                val teamWon = teamScore > oppScore
-
-                Text(
-                    text = if (teamWon) "${selectedTeam.tricode} Win!" else "${selectedTeam.tricode} Loss",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = if (teamWon) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                )
             }
         }
 
@@ -469,8 +461,28 @@ fun ErrorView(message: String, onRetry: () -> Unit) {
 }
 
 @Composable
-fun TeamScore(teamCode: String, score: String, record: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+fun TeamScore(
+    teamCode: String,
+    score: String,
+    record: String,
+    isWinner: Boolean = false
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .then(
+                if (isWinner) {
+                    Modifier
+                        .background(
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                } else {
+                    Modifier
+                }
+            )
+    ) {
         Text(
             text = teamCode,
             style = MaterialTheme.typography.bodyLarge,
