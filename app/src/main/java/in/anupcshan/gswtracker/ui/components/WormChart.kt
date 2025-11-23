@@ -154,26 +154,5 @@ fun WormChart(
                 )
             }
         }
-
-        // Current score differential
-        val currentDiff = wormData.lastOrNull()?.scoreDiff ?: 0
-        val diffText = when {
-            currentDiff > 0 -> "$teamTricode +$currentDiff"
-            currentDiff < 0 -> "$teamTricode ${currentDiff}"
-            else -> "Tied"
-        }
-        Text(
-            text = diffText,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
-            color = when {
-                currentDiff > 0 -> GswWinning
-                currentDiff < 0 -> GswLosing
-                else -> MaterialTheme.colorScheme.onSurface
-            },
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally)
-                .padding(top = 8.dp)
-        )
     }
 }
