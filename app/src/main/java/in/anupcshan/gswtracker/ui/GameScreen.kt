@@ -165,6 +165,31 @@ fun NoGameView(nextGame: Game?, selectedTeam: NBATeam) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Team records
+                    val isTeamHome = it.homeTeam.teamTricode == selectedTeam.tricode
+                    val teamData = if (isTeamHome) it.homeTeam else it.awayTeam
+                    val oppData = if (isTeamHome) it.awayTeam else it.homeTeam
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TeamScore(
+                            teamCode = selectedTeam.tricode,
+                            score = "--",
+                            record = "${teamData.wins}-${teamData.losses}"
+                        )
+                        Text("vs", style = MaterialTheme.typography.bodyLarge)
+                        TeamScore(
+                            teamCode = getOpponentTricode(it, selectedTeam.tricode),
+                            score = "--",
+                            record = "${oppData.wins}-${oppData.losses}"
+                        )
+                    }
                 }
             }
         }
@@ -211,22 +236,26 @@ fun ScheduledGameView(game: Game, selectedTeam: NBATeam) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Score placeholder
+                // Team records
+                val isTeamHome = game.homeTeam.teamTricode == selectedTeam.tricode
+                val teamData = if (isTeamHome) game.homeTeam else game.awayTeam
+                val oppData = if (isTeamHome) game.awayTeam else game.homeTeam
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val isTeamHome = game.homeTeam.teamTricode == selectedTeam.tricode
-                    val teamData = if (isTeamHome) game.homeTeam else game.awayTeam
-                    val oppData = if (isTeamHome) game.awayTeam else game.homeTeam
-
-                    TeamScore(selectedTeam.tricode, "--", "${teamData.wins}-${teamData.losses}")
+                    TeamScore(
+                        teamCode = selectedTeam.tricode,
+                        score = "--",
+                        record = "${teamData.wins}-${teamData.losses}"
+                    )
                     Text("vs", style = MaterialTheme.typography.bodyLarge)
                     TeamScore(
-                        getOpponentTricode(game, selectedTeam.tricode),
-                        "--",
-                        "${oppData.wins}-${oppData.losses}"
+                        teamCode = getOpponentTricode(game, selectedTeam.tricode),
+                        score = "--",
+                        record = "${oppData.wins}-${oppData.losses}"
                     )
                 }
 
@@ -464,7 +493,7 @@ fun ErrorView(message: String, onRetry: () -> Unit) {
 fun TeamScore(
     teamCode: String,
     score: String,
-    record: String,
+    record: String? = null,
     isWinner: Boolean = false
 ) {
     Column(
@@ -494,12 +523,14 @@ fun TeamScore(
             style = MaterialTheme.typography.displayLarge,
             fontWeight = FontWeight.Bold
         )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = record,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        record?.let {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 

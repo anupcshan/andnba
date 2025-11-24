@@ -6,6 +6,7 @@ import okhttp3.Cache
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import java.io.File
+import java.time.LocalDate
 import java.util.concurrent.TimeUnit
 
 /**
@@ -68,6 +69,27 @@ class NbaApiClient(context: Context) {
 
         fun getBoxScoreUrl(gameId: String): String {
             return "$BASE_URL/boxscore/boxscore_$gameId.json"
+        }
+
+        /**
+         * Get standings URL for the current NBA season
+         * NBA season runs October to June, so:
+         * - Oct-Dec: current year to next year (e.g., Oct 2025 = 2025-26)
+         * - Jan-Jun: previous year to current year (e.g., Jan 2026 = 2025-26)
+         * - Jul-Sep: off-season, use previous season (e.g., Jul 2025 = 2024-25)
+         */
+        fun getStandingsUrl(): String {
+            val now = LocalDate.now()
+            val currentYear = now.year
+            val currentMonth = now.monthValue
+
+            val season = when {
+                currentMonth >= 10 -> "$currentYear-${(currentYear + 1) % 100}"
+                currentMonth <= 6 -> "${currentYear - 1}-${currentYear % 100}"
+                else -> "${currentYear - 1}-${currentYear % 100}" // Jul-Sep: off-season
+            }
+
+            return "https://stats.nba.com/stats/leaguestandingsv3?LeagueID=00&Season=$season&SeasonType=Regular+Season"
         }
     }
 }
