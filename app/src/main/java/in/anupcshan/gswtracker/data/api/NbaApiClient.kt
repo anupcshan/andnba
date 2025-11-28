@@ -1,6 +1,9 @@
 package `in`.anupcshan.gswtracker.data.api
 
 import android.content.Context
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.Json
 import okhttp3.Cache
 import okhttp3.OkHttpClient
@@ -8,6 +11,33 @@ import okhttp3.logging.HttpLoggingInterceptor
 import java.io.File
 import java.time.LocalDate
 import java.util.concurrent.TimeUnit
+
+/**
+ * Tracks network data usage for this app with persistence
+ */
+object DataUsageTracker {
+    private const val PREFS_NAME = "data_usage_prefs"
+    private const val KEY_BYTES_USED = "bytes_used"
+
+    private var prefs: android.content.SharedPreferences? = null
+    private val _bytesUsed = MutableStateFlow(0L)
+    val bytesUsed: StateFlow<Long> = _bytesUsed.asStateFlow()
+
+    fun init(context: Context) {
+        prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        _bytesUsed.value = prefs?.getLong(KEY_BYTES_USED, 0L) ?: 0L
+    }
+
+    fun addBytes(bytes: Long) {
+        _bytesUsed.value += bytes
+        prefs?.edit()?.putLong(KEY_BYTES_USED, _bytesUsed.value)?.apply()
+    }
+
+    fun reset() {
+        _bytesUsed.value = 0L
+        prefs?.edit()?.putLong(KEY_BYTES_USED, 0L)?.apply()
+    }
+}
 
 /**
  * NBA API client with caching support
@@ -50,9 +80,21 @@ class NbaApiClient(context: Context) {
             .build()
     }
 
+    private val dataUsageInterceptor = okhttp3.Interceptor { chain ->
+        val response = chain.proceed(chain.request())
+        // Track actual bytes received on the wire (compressed size)
+        // Use Content-Length header from network response (before decompression)
+        val bytesReceived = response.header("Content-Length")?.toLongOrNull() ?: 0
+        if (bytesReceived > 0) {
+            DataUsageTracker.addBytes(bytesReceived)
+        }
+        response
+    }
+
     val httpClient: OkHttpClient = OkHttpClient.Builder()
         .cache(cache)
         .addNetworkInterceptor(cacheInterceptor)
+        .addNetworkInterceptor(dataUsageInterceptor)
         .addInterceptor(loggingInterceptor)
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)

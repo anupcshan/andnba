@@ -3,6 +3,7 @@ package `in`.anupcshan.gswtracker.ui.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import `in`.anupcshan.gswtracker.data.api.DataUsageTracker
 import `in`.anupcshan.gswtracker.data.model.GameState
 import `in`.anupcshan.gswtracker.data.model.NBATeam
 import `in`.anupcshan.gswtracker.data.model.NBATeams
@@ -30,6 +31,12 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
     private val _lastUpdateTime = MutableStateFlow<Long?>(null)
     val lastUpdateTime: StateFlow<Long?> = _lastUpdateTime.asStateFlow()
+
+    val dataUsage: StateFlow<Long> = DataUsageTracker.bytesUsed
+
+    fun resetDataUsage() {
+        DataUsageTracker.reset()
+    }
 
     private var pollingJob: Job? = null
     private var currentGameId: String? = null

@@ -1,7 +1,9 @@
 package `in`.anupcshan.gswtracker.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -35,6 +37,7 @@ fun GameScreen(viewModel: GameViewModel) {
     val selectedTeam by viewModel.selectedTeam.collectAsState()
     val isPolling by viewModel.isPolling.collectAsState()
     val lastUpdateTime by viewModel.lastUpdateTime.collectAsState()
+    val dataUsage by viewModel.dataUsage.collectAsState()
     val isRefreshing = gameState is GameState.Loading
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -70,6 +73,13 @@ fun GameScreen(viewModel: GameViewModel) {
                         modifier = Modifier.align(Alignment.TopEnd)
                     )
                 }
+
+                // Data usage indicator in bottom-right corner
+                DataUsageIndicator(
+                    bytes = dataUsage,
+                    onLongPress = { viewModel.resetDataUsage() },
+                    modifier = Modifier.align(Alignment.BottomEnd)
+                )
             }
         }
     }
@@ -760,5 +770,33 @@ fun PollingIndicator(
                 color = Color(0xFF4CAF50), // Green
                 shape = CircleShape
             )
+    )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun DataUsageIndicator(
+    bytes: Long,
+    onLongPress: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val formattedSize = remember(bytes) {
+        when {
+            bytes < 1024 -> "$bytes B"
+            bytes < 1024 * 1024 -> String.format("%.1f KB", bytes / 1024.0)
+            else -> String.format("%.2f MB", bytes / (1024.0 * 1024.0))
+        }
+    }
+
+    Text(
+        text = formattedSize,
+        modifier = modifier
+            .combinedClickable(
+                onClick = {},
+                onLongClick = onLongPress
+            )
+            .padding(8.dp),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
     )
 }
