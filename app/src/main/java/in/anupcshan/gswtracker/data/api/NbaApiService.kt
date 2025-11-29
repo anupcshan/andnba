@@ -65,7 +65,7 @@ class NbaApiService(
 
     /**
      * Fetch play-by-play data for a specific game
-     * @param forceRefresh If true, bypasses cache and fetches from network
+     * @param forceRefresh If true, tries network first but falls back to cache on failure
      */
     suspend fun getPlayByPlay(gameId: String, forceRefresh: Boolean = false): Result<PlayByPlayResponse> = withContext(ioDispatcher) {
         try {
@@ -90,6 +90,11 @@ class NbaApiService(
                 Result.success(playByPlay)
             }
         } catch (e: Exception) {
+            // If force refresh failed (e.g., no network), try cache as fallback
+            if (forceRefresh) {
+                Log.w(TAG, "getPlayByPlay: Network failed, trying cache fallback", e)
+                return@withContext getPlayByPlay(gameId, forceRefresh = false)
+            }
             Result.failure(e)
         }
     }

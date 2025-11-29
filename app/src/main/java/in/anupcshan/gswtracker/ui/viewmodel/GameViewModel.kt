@@ -74,6 +74,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
     /**
      * Fetch today's game and determine state
+     * @param showLoading If true, shows loading state (used for initial load/refresh)
      */
     private suspend fun fetchGameData(showLoading: Boolean = false) {
         if (showLoading) {
@@ -105,10 +106,15 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             }
             .onFailure { error ->
                 Log.e(TAG, "fetchGameData: Error fetching game", error)
-                _gameState.value = GameState.Error(
-                    error.message ?: "Failed to load game data"
-                )
-                stopPolling()
+                // Only show error on initial load, not during polling
+                // This prevents transient network errors from disrupting the UI
+                if (showLoading || _gameState.value is GameState.Loading) {
+                    _gameState.value = GameState.Error(
+                        error.message ?: "Failed to load game data"
+                    )
+                    stopPolling()
+                }
+                // During polling, silently ignore errors and keep previous state
             }
     }
 
