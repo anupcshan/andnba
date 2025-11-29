@@ -13,6 +13,7 @@ sealed class GameState {
     data class GameLive(
         val game: Game,
         val wormData: List<WormPoint> = emptyList(),
+        val recentPlays: List<RecentPlay> = emptyList(),
         val lastFetchedPeriod: Int = 0
     ) : GameState()
 

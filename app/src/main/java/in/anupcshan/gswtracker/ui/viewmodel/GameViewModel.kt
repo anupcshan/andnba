@@ -40,6 +40,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
     private var pollingJob: Job? = null
     private var currentGameId: String? = null
+    private var lastKnownScore: Pair<Int, Int>? = null // (homeScore, awayScore)
 
     companion object {
         private const val TAG = "GameViewModel"
@@ -57,6 +58,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     fun selectTeam(team: NBATeam) {
         if (_selectedTeam.value.tricode != team.tricode) {
             _selectedTeam.value = team
+            lastKnownScore = null
             refreshGame()
         }
     }
@@ -150,27 +152,29 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 val isTeamHome = repository.isTeamHome(game, teamTricode)
 
                 // Try restoring from HTTP cache (survives process restart)
-                val cached = repository.tryRestoreWormDataFromCache(game.gameId, isTeamHome)
+                val cached = repository.tryRestoreFromCache(game.gameId, isTeamHome)
                     .getOrNull()
 
-                val (wormData, lastFetched) = if (cached != null) {
+                val (wormData, recentPlays, lastFetched) = if (cached != null) {
                     // Cache hit - use restored data
-                    cached.first to cached.second
+                    Triple(cached.first.wormData, cached.first.recentPlays, cached.second)
                 } else {
                     // Cache miss - start fresh
                     val currentState = gameState.value
                     val currentWormData = (currentState as? GameState.GameLive)?.wormData ?: emptyList()
+                    val currentRecentPlays = (currentState as? GameState.GameLive)?.recentPlays ?: emptyList()
                     val currentLastFetched = (currentState as? GameState.GameLive)?.lastFetchedPeriod ?: 0
-                    currentWormData to currentLastFetched
+                    Triple(currentWormData, currentRecentPlays, currentLastFetched)
                 }
 
                 _gameState.value = GameState.GameLive(
                     game = game,
                     wormData = wormData,
+                    recentPlays = recentPlays,
                     lastFetchedPeriod = lastFetched
                 )
 
-                fetchWormDataIfNeeded(game)
+                fetchPlayByPlayIfNeeded(game)
                 startPollingIfNeeded()
             }
             3 -> {
@@ -186,16 +190,18 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     }
 
     /**
-     * Fetch worm data if period has changed since last fetch
-     * This ensures we have worm data even when opening the app mid-game
+     * Fetch play-by-play data if period or score has changed
+     * This ensures recent plays update on every scoring event
      */
-    private suspend fun fetchWormDataIfNeeded(game: `in`.anupcshan.gswtracker.data.model.Game) {
+    private suspend fun fetchPlayByPlayIfNeeded(game: `in`.anupcshan.gswtracker.data.model.Game) {
         val currentState = gameState.value
         val lastFetched = (currentState as? GameState.GameLive)?.lastFetchedPeriod ?: 0
+        val currentScore = game.homeTeam.score to game.awayTeam.score
+        val scoreChanged = lastKnownScore != currentScore
 
-        if (game.period != lastFetched && game.period > 0) {
-            // Period changed or first fetch - get updated play-by-play
-            fetchWormData(game)
+        if ((game.period != lastFetched && game.period > 0) || scoreChanged) {
+            lastKnownScore = currentScore
+            fetchPlayByPlayData(game)
         }
     }
 
@@ -210,16 +216,16 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         val nextGameResult = repository.getNextTeamGame(teamTricode)
         val nextGame = nextGameResult.getOrNull()?.let { repository.scheduledGameToGame(it) }
 
-        repository.getWormData(game.gameId, isTeamHome)
-            .onSuccess { wormData ->
+        repository.getPlayByPlayData(game.gameId, isTeamHome)
+            .onSuccess { data ->
                 _gameState.value = GameState.GameFinal(
                     game = game,
-                    wormData = wormData,
+                    wormData = data.wormData,
                     lastFetchedPeriod = game.period,
                     nextGame = nextGame
                 )
             }
-            .onFailure { error ->
+            .onFailure { _ ->
                 // Show game as final even if worm data fails
                 _gameState.value = GameState.GameFinal(
                     game = game,
@@ -231,17 +237,18 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     }
 
     /**
-     * Fetch worm data for live game
+     * Fetch play-by-play data for live game
      */
-    private suspend fun fetchWormData(game: `in`.anupcshan.gswtracker.data.model.Game) {
+    private suspend fun fetchPlayByPlayData(game: `in`.anupcshan.gswtracker.data.model.Game) {
         val teamTricode = _selectedTeam.value.tricode
         val isTeamHome = repository.isTeamHome(game, teamTricode)
-        repository.getWormData(game.gameId, isTeamHome)
-            .onSuccess { wormData ->
+        repository.getPlayByPlayData(game.gameId, isTeamHome, forceRefresh = true)
+            .onSuccess { data ->
                 val currentState = _gameState.value
                 if (currentState is GameState.GameLive) {
                     _gameState.value = currentState.copy(
-                        wormData = wormData,
+                        wormData = data.wormData,
+                        recentPlays = data.recentPlays,
                         lastFetchedPeriod = game.period
                     )
                 }
@@ -274,6 +281,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         _lastUpdateTime.value = null
         pollingJob?.cancel()
         pollingJob = null
+        lastKnownScore = null
     }
 
     override fun onCleared() {

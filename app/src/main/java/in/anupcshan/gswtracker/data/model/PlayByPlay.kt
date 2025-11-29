@@ -37,3 +37,11 @@ data class WormPoint(
     val awayScore: Int,
     val scoreDiff: Int // homeScore - awayScore
 )
+
+// Recent play for display
+data class RecentPlay(
+    val description: String,
+    val teamTricode: String?,
+    val clock: String,
+    val period: Int
+)

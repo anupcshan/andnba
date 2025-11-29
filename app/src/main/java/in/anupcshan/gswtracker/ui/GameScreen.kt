@@ -23,6 +23,7 @@ import `in`.anupcshan.gswtracker.data.model.Game
 import `in`.anupcshan.gswtracker.data.model.GameState
 import `in`.anupcshan.gswtracker.data.model.NBATeam
 import `in`.anupcshan.gswtracker.data.model.NBATeams
+import `in`.anupcshan.gswtracker.data.model.RecentPlay
 import `in`.anupcshan.gswtracker.data.repository.GameRepository
 import `in`.anupcshan.gswtracker.ui.components.WormChart
 import `in`.anupcshan.gswtracker.ui.viewmodel.GameViewModel
@@ -61,7 +62,7 @@ fun GameScreen(viewModel: GameViewModel) {
                     is GameState.Loading -> LoadingView()
                     is GameState.NoGameToday -> NoGameView(state.nextGame, selectedTeam)
                     is GameState.GameScheduled -> ScheduledGameView(state.game, selectedTeam)
-                    is GameState.GameLive -> LiveGameView(state.game, state.wormData, selectedTeam)
+                    is GameState.GameLive -> LiveGameView(state.game, state.wormData, state.recentPlays, selectedTeam)
                     is GameState.GameFinal -> FinalGameView(state.game, state.wormData, state.nextGame, selectedTeam)
                     is GameState.Error -> ErrorView(state.message) { viewModel.refreshGame() }
                 }
@@ -274,7 +275,12 @@ fun ScheduledGameView(game: Game, selectedTeam: NBATeam) {
 }
 
 @Composable
-fun LiveGameView(game: Game, wormData: List<`in`.anupcshan.gswtracker.data.model.WormPoint> = emptyList(), selectedTeam: NBATeam) {
+fun LiveGameView(
+    game: Game,
+    wormData: List<`in`.anupcshan.gswtracker.data.model.WormPoint> = emptyList(),
+    recentPlays: List<RecentPlay> = emptyList(),
+    selectedTeam: NBATeam
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -345,6 +351,13 @@ fun LiveGameView(game: Game, wormData: List<`in`.anupcshan.gswtracker.data.model
         // Game Statistics Section
         OutlinedSection {
             QuarterBreakdown(game)
+
+            // Recent plays (if available)
+            if (recentPlays.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                RecentPlaysSection(recentPlays)
+            }
+
             // Worm chart (if data available)
             if (wormData.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(16.dp))
@@ -603,6 +616,54 @@ fun QuarterBreakdown(game: Game) {
                     modifier = Modifier.weight(0.175f),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun RecentPlaysSection(recentPlays: List<RecentPlay>) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "Recent Plays",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        recentPlays.forEach { play ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                // Time and period
+                Text(
+                    text = "${getPeriodLabel(play.period)} ${play.clock}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.width(70.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                // Team tricode (if available)
+                play.teamTricode?.let { tricode ->
+                    Text(
+                        text = tricode,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.width(36.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                // Play description
+                Text(
+                    text = play.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
                 )
             }
         }

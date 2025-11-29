@@ -4,6 +4,7 @@ import android.util.Log
 import `in`.anupcshan.gswtracker.data.api.NbaApiService
 import `in`.anupcshan.gswtracker.data.model.Game
 import `in`.anupcshan.gswtracker.data.model.GameAction
+import `in`.anupcshan.gswtracker.data.model.RecentPlay
 import `in`.anupcshan.gswtracker.data.model.ScheduledGame
 import `in`.anupcshan.gswtracker.data.model.Team
 import `in`.anupcshan.gswtracker.data.model.TeamRecord
@@ -14,6 +15,14 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+
+/**
+ * Container for play-by-play derived data
+ */
+data class PlayByPlayData(
+    val wormData: List<WormPoint>,
+    val recentPlays: List<RecentPlay>
+)
 
 /**
  * Repository for fetching and processing NBA game data
@@ -78,30 +87,37 @@ class GameRepository(
     }
 
     /**
-     * Get play-by-play data and convert to worm chart points
+     * Get play-by-play data and convert to worm chart points and recent plays
      * @param gameId The game ID
      * @param isGswHome Whether GSW is the home team (for correct score differential calculation)
+     * @param forceRefresh If true, bypasses cache for live game updates
      */
-    suspend fun getWormData(gameId: String, isGswHome: Boolean): Result<List<WormPoint>> {
-        return apiService.getPlayByPlay(gameId).map { response ->
-            processPlayByPlayToWorm(response.game.actions, isGswHome)
+    suspend fun getPlayByPlayData(gameId: String, isGswHome: Boolean, forceRefresh: Boolean = false): Result<PlayByPlayData> {
+        return apiService.getPlayByPlay(gameId, forceRefresh).map { response ->
+            PlayByPlayData(
+                wormData = processPlayByPlayToWorm(response.game.actions, isGswHome),
+                recentPlays = extractRecentPlays(response.game.actions)
+            )
         }
     }
 
     /**
-     * Try to restore worm data from HTTP cache (no network call)
-     * Returns pair of (wormData, lastFetchedPeriod) if cache hit, null otherwise
+     * Try to restore play-by-play data from HTTP cache (no network call)
+     * Returns PlayByPlayData and lastFetchedPeriod if cache hit, null otherwise
      * This allows restoring state across app restarts without refetching
      */
-    suspend fun tryRestoreWormDataFromCache(gameId: String, isGswHome: Boolean): Result<Pair<List<WormPoint>, Int>?> {
+    suspend fun tryRestoreFromCache(gameId: String, isGswHome: Boolean): Result<Pair<PlayByPlayData, Int>?> {
         return apiService.getPlayByPlayFromCache(gameId).map { response ->
             if (response == null) {
                 // Cache miss
                 null
             } else {
-                val wormData = processPlayByPlayToWorm(response.game.actions, isGswHome)
+                val data = PlayByPlayData(
+                    wormData = processPlayByPlayToWorm(response.game.actions, isGswHome),
+                    recentPlays = extractRecentPlays(response.game.actions)
+                )
                 val lastPeriod = response.game.actions.maxOfOrNull { it.period } ?: 0
-                wormData to lastPeriod
+                data to lastPeriod
             }
         }
     }
@@ -136,6 +152,34 @@ class GameRepository(
                 }
             }
             .distinctBy { it.gameTimeSeconds } // Remove duplicate time points
+    }
+
+    /**
+     * Extract last 5 plays with descriptions from play-by-play data
+     */
+    private fun extractRecentPlays(actions: List<GameAction>): List<RecentPlay> {
+        return actions
+            .filter { !it.description.isNullOrBlank() }
+            .takeLast(5)
+            .reversed() // Most recent first
+            .map { action ->
+                RecentPlay(
+                    description = action.description!!,
+                    teamTricode = action.teamTricode,
+                    clock = formatClock(action.clock),
+                    period = action.period
+                )
+            }
+    }
+
+    /**
+     * Format clock string from ISO duration to readable format
+     * e.g., "PT11M58.00S" -> "11:58"
+     */
+    private fun formatClock(clock: String): String {
+        val minutes = Regex("""(\d+)M""").find(clock)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+        val seconds = Regex("""(\d+(?:\.\d+)?)S""").find(clock)?.groupValues?.get(1)?.toDoubleOrNull()?.toInt() ?: 0
+        return "%d:%02d".format(minutes, seconds)
     }
 
     /**

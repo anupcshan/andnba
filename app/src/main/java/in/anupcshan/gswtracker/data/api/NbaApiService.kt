@@ -65,14 +65,18 @@ class NbaApiService(
 
     /**
      * Fetch play-by-play data for a specific game
+     * @param forceRefresh If true, bypasses cache and fetches from network
      */
-    suspend fun getPlayByPlay(gameId: String): Result<PlayByPlayResponse> = withContext(ioDispatcher) {
+    suspend fun getPlayByPlay(gameId: String, forceRefresh: Boolean = false): Result<PlayByPlayResponse> = withContext(ioDispatcher) {
         try {
-            val request = Request.Builder()
+            val requestBuilder = Request.Builder()
                 .url(NbaApiClient.getPlayByPlayUrl(gameId))
-                .build()
 
-            httpClient.newCall(request).execute().use { response ->
+            if (forceRefresh) {
+                requestBuilder.cacheControl(CacheControl.FORCE_NETWORK)
+            }
+
+            httpClient.newCall(requestBuilder.build()).execute().use { response ->
                 if (!response.isSuccessful) {
                     return@withContext Result.failure(
                         Exception("HTTP ${response.code}: ${response.message}")
