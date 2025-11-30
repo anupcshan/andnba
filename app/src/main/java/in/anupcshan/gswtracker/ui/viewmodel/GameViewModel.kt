@@ -32,6 +32,9 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     private val _lastUpdateTime = MutableStateFlow<Long?>(null)
     val lastUpdateTime: StateFlow<Long?> = _lastUpdateTime.asStateFlow()
 
+    private val _liveTeams = MutableStateFlow<Set<String>>(emptySet())
+    val liveTeams: StateFlow<Set<String>> = _liveTeams.asStateFlow()
+
     val dataUsage: StateFlow<Long> = DataUsageTracker.bytesUsed
 
     fun resetDataUsage() {
@@ -87,6 +90,12 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             .onSuccess { todaysGameResult ->
                 val scoreboard = todaysGameResult.first
                 val game = todaysGameResult.second
+
+                // Update live teams from all games in scoreboard
+                _liveTeams.value = scoreboard.games
+                    .filter { it.gameStatus == 2 }
+                    .flatMap { listOf(it.homeTeam.teamTricode, it.awayTeam.teamTricode) }
+                    .toSet()
 
                 when {
                     // No game scheduled today

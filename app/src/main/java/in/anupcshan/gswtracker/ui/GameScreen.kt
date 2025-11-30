@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -47,6 +48,7 @@ fun GameScreen(viewModel: GameViewModel) {
     val isPolling by viewModel.isPolling.collectAsState()
     val lastUpdateTime by viewModel.lastUpdateTime.collectAsState()
     val dataUsage by viewModel.dataUsage.collectAsState()
+    val liveTeams by viewModel.liveTeams.collectAsState()
     val isRefreshing = gameState is GameState.Loading
 
     // Keep screen on during live games
@@ -57,6 +59,7 @@ fun GameScreen(viewModel: GameViewModel) {
         TeamSelector(
             selectedTeam = selectedTeam,
             onTeamSelected = { viewModel.selectTeam(it) },
+            liveTeams = liveTeams,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
 
@@ -761,13 +764,19 @@ private fun getPeriodLabel(period: Int): String {
 fun TeamSelector(
     selectedTeam: NBATeam,
     onTeamSelected: (NBATeam) -> Unit,
+    liveTeams: Set<String> = emptySet(),
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val isSelectedTeamLive = selectedTeam.tricode in liveTeams
+    val focusManager = LocalFocusManager.current
 
     ExposedDropdownMenuBox(
         expanded = expanded,
-        onExpandedChange = { expanded = it },
+        onExpandedChange = {
+            expanded = it
+            if (!it) focusManager.clearFocus()
+        },
         modifier = modifier
     ) {
         OutlinedTextField(
@@ -775,12 +784,25 @@ fun TeamSelector(
             onValueChange = {},
             readOnly = true,
             trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (isSelectedTeamLive) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(Color(0xFF4CAF50), CircleShape)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                }
             },
             modifier = Modifier
                 .menuAnchor()
                 .width(110.dp),
-            colors = OutlinedTextFieldDefaults.colors(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.outline,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+            ),
             textStyle = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
             singleLine = true
         )
@@ -790,14 +812,25 @@ fun TeamSelector(
             onDismissRequest = { expanded = false }
         ) {
             NBATeams.ALL_TEAMS.forEach { team ->
+                val isLive = team.tricode in liveTeams
                 DropdownMenuItem(
                     text = {
                         Column {
-                            Text(
-                                text = team.tricode,
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = team.tricode,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                if (isLive) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .background(Color(0xFF4CAF50), CircleShape)
+                                    )
+                                }
+                            }
                             Text(
                                 text = team.fullName,
                                 style = MaterialTheme.typography.bodySmall,
