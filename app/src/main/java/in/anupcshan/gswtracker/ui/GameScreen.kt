@@ -1,5 +1,7 @@
 package `in`.anupcshan.gswtracker.ui
 
+import android.view.WindowManager
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -15,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -40,6 +43,9 @@ fun GameScreen(viewModel: GameViewModel) {
     val lastUpdateTime by viewModel.lastUpdateTime.collectAsState()
     val dataUsage by viewModel.dataUsage.collectAsState()
     val isRefreshing = gameState is GameState.Loading
+
+    // Keep screen on during live games
+    KeepScreenOn(enabled = gameState is GameState.GameLive)
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Team selector dropdown
@@ -862,4 +868,18 @@ fun DataUsageIndicator(
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
     )
+}
+
+@Composable
+fun KeepScreenOn(enabled: Boolean) {
+    val context = LocalContext.current
+    DisposableEffect(enabled) {
+        val window = (context as? ComponentActivity)?.window
+        if (enabled) {
+            window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        onDispose {
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
 }
