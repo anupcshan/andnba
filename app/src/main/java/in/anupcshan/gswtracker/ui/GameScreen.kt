@@ -813,6 +813,7 @@ fun TeamSelector(
         ) {
             NBATeams.ALL_TEAMS.forEach { team ->
                 val isLive = team.tricode in liveTeams
+                val isSelected = team.tricode == selectedTeam.tricode
                 DropdownMenuItem(
                     text = {
                         Column {
@@ -842,9 +843,9 @@ fun TeamSelector(
                         onTeamSelected(team)
                         expanded = false
                     },
-                    leadingIcon = if (team.tricode == selectedTeam.tricode) {
-                        { Text("✓", style = MaterialTheme.typography.bodyLarge) }
-                    } else null
+                    modifier = if (isSelected) {
+                        Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
+                    } else Modifier
                 )
             }
         }
