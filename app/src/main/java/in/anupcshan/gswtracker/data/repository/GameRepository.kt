@@ -166,7 +166,8 @@ class GameRepository(
                     description = action.description!!,
                     teamTricode = action.teamTricode,
                     clock = formatClock(action.clock),
-                    period = action.period
+                    period = action.period,
+                    gameTimeSeconds = calculateGameTimeSeconds(action.period, action.clock)
                 )
             }
     }

@@ -1,15 +1,18 @@
 package `in`.anupcshan.gswtracker.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import `in`.anupcshan.gswtracker.data.model.WormPoint
 import `in`.anupcshan.gswtracker.ui.theme.GswLosing
@@ -21,7 +24,8 @@ import kotlin.math.max
 fun WormChart(
     wormData: List<WormPoint>,
     modifier: Modifier = Modifier,
-    teamTricode: String = "GSW"
+    teamTricode: String = "GSW",
+    onTimeSelected: ((Int) -> Unit)? = null
 ) {
     val separatorColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
     if (wormData.isEmpty()) {
@@ -43,24 +47,34 @@ fun WormChart(
         // Calculate chart bounds
         val maxScoreDiff = wormData.maxOfOrNull { abs(it.scoreDiff) } ?: 10
         val yAxisMax = maxScoreDiff + 1 // Add 1 point buffer to avoid drawing on edge
+        val firstGameTime = wormData.first().gameTimeSeconds
+        val lastGameTime = wormData.last().gameTimeSeconds
+        val padding = 40f
 
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(200.dp)
+                .pointerInput(wormData, onTimeSelected) {
+                    if (onTimeSelected != null) {
+                        detectTapGestures { offset ->
+                            val xScale = (size.width - padding * 2) / (lastGameTime - firstGameTime).coerceAtLeast(1)
+                            val tappedTime = firstGameTime + ((offset.x - padding) / xScale).toInt()
+                            val clampedTime = tappedTime.coerceIn(firstGameTime, lastGameTime)
+                            onTimeSelected(clampedTime)
+                        }
+                    }
+                }
         ) {
             val width = size.width
             val height = size.height
-            val padding = 40f // Padding for axes
 
             // Calculate scales
-            val xScale = (width - padding * 2) / (wormData.last().gameTimeSeconds - wormData.first().gameTimeSeconds).coerceAtLeast(1)
+            val xScale = (width - padding * 2) / (lastGameTime - firstGameTime).coerceAtLeast(1)
             val yScale = (height - padding * 2) / (yAxisMax * 2)
 
             // Draw alternating background colors for quarters
             val quarterLength = 720 // 12 minutes per quarter in seconds
-            val firstGameTime = wormData.first().gameTimeSeconds
-            val lastGameTime = wormData.last().gameTimeSeconds
             val maxPeriodInData = wormData.maxOfOrNull { it.period } ?: 4
 
             for (period in 1..maxPeriodInData) {

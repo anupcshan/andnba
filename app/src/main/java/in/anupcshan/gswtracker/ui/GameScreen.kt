@@ -7,10 +7,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import kotlinx.coroutines.launch
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -287,6 +292,9 @@ fun LiveGameView(
     recentPlays: List<RecentPlay> = emptyList(),
     selectedTeam: NBATeam
 ) {
+    val playsListState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -361,13 +369,24 @@ fun LiveGameView(
             // Recent plays (if available)
             if (recentPlays.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(16.dp))
-                RecentPlaysSection(recentPlays)
+                RecentPlaysSection(recentPlays, playsListState)
             }
 
             // Worm chart (if data available)
             if (wormData.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(16.dp))
-                WormChart(wormData = wormData, teamTricode = selectedTeam.tricode)
+                WormChart(
+                    wormData = wormData,
+                    teamTricode = selectedTeam.tricode,
+                    onTimeSelected = { selectedTime ->
+                        // Find the play closest to the selected time
+                        val targetIndex = recentPlays.indexOfFirst { it.gameTimeSeconds <= selectedTime }
+                            .takeIf { it >= 0 } ?: 0
+                        coroutineScope.launch {
+                            playsListState.animateScrollToItem(targetIndex)
+                        }
+                    }
+                )
             }
         }
     }
@@ -629,50 +648,48 @@ fun QuarterBreakdown(game: Game) {
 }
 
 @Composable
-fun RecentPlaysSection(recentPlays: List<RecentPlay>) {
-    Box(
+fun RecentPlaysSection(
+    recentPlays: List<RecentPlay>,
+    listState: LazyListState = rememberLazyListState()
+) {
+    LazyColumn(
+        state = listState,
         modifier = Modifier
             .fillMaxWidth()
             .height(100.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-        ) {
-            recentPlays.forEach { play ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    // Time and period
+        itemsIndexed(recentPlays) { _, play ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                // Time and period
+                Text(
+                    text = "${getPeriodLabel(play.period)} ${play.clock}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.width(70.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                // Team tricode (if available)
+                play.teamTricode?.let { tricode ->
                     Text(
-                        text = "${getPeriodLabel(play.period)} ${play.clock}",
+                        text = tricode,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.width(70.dp)
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.width(36.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    // Team tricode (if available)
-                    play.teamTricode?.let { tricode ->
-                        Text(
-                            text = tricode,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.width(36.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                    // Play description
-                    Text(
-                        text = play.description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f)
-                    )
                 }
+                // Play description
+                Text(
+                    text = play.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
     }

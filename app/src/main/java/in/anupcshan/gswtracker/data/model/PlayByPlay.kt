@@ -43,5 +43,6 @@ data class RecentPlay(
     val description: String,
     val teamTricode: String?,
     val clock: String,
-    val period: Int
+    val period: Int,
+    val gameTimeSeconds: Int
 )
