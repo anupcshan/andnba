@@ -155,12 +155,11 @@ class GameRepository(
     }
 
     /**
-     * Extract last 5 plays with descriptions from play-by-play data
+     * Extract all plays with descriptions from play-by-play data
      */
     private fun extractRecentPlays(actions: List<GameAction>): List<RecentPlay> {
         return actions
             .filter { !it.description.isNullOrBlank() }
-            .takeLast(5)
             .reversed() // Most recent first
             .map { action ->
                 RecentPlay(

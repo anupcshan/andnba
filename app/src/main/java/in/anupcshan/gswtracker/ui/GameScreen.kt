@@ -624,47 +624,49 @@ fun QuarterBreakdown(game: Game) {
 
 @Composable
 fun RecentPlaysSection(recentPlays: List<RecentPlay>) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = "Recent Plays",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        recentPlays.forEach { play ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.Top
-            ) {
-                // Time and period
-                Text(
-                    text = "${getPeriodLabel(play.period)} ${play.clock}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.width(70.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                // Team tricode (if available)
-                play.teamTricode?.let { tricode ->
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(100.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+            recentPlays.forEach { play ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    // Time and period
                     Text(
-                        text = tricode,
+                        text = "${getPeriodLabel(play.period)} ${play.clock}",
                         style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.width(36.dp)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.width(70.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
+                    // Team tricode (if available)
+                    play.teamTricode?.let { tricode ->
+                        Text(
+                            text = tricode,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.width(36.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    // Play description
+                    Text(
+                        text = play.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
-                // Play description
-                Text(
-                    text = play.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f)
-                )
             }
         }
     }
