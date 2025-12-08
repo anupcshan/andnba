@@ -116,3 +116,7 @@ app/release/
 
 # Misc
 *.orig
+
+# Nix
+result
+.direnv/
