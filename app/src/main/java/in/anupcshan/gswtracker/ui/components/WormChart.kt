@@ -12,6 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import `in`.anupcshan.gswtracker.data.model.WormPoint
@@ -43,12 +45,17 @@ fun WormChart(
         return
     }
 
+    // Find max lead and max trail points
+    val maxLeadPoint = wormData.maxByOrNull { it.scoreDiff }
+    val maxTrailPoint = wormData.minByOrNull { it.scoreDiff }
+
     Column(modifier = modifier) {
         // Calculate chart bounds
         val maxScoreDiff = wormData.maxOfOrNull { abs(it.scoreDiff) } ?: 10
         val yAxisMax = maxScoreDiff + 1 // Add 1 point buffer to avoid drawing on edge
         val firstGameTime = wormData.first().gameTimeSeconds
         val lastGameTime = wormData.last().gameTimeSeconds
+        val rightPadding = 100f // Extra space for annotations
         val padding = 40f
 
         Canvas(
@@ -70,7 +77,7 @@ fun WormChart(
             val height = size.height
 
             // Calculate scales
-            val xScale = (width - padding * 2) / (lastGameTime - firstGameTime).coerceAtLeast(1)
+            val xScale = (width - padding - rightPadding) / (lastGameTime - firstGameTime).coerceAtLeast(1)
             val yScale = (height - padding * 2) / (yAxisMax * 2)
 
             // Draw alternating background colors for quarters
@@ -106,11 +113,12 @@ fun WormChart(
 
             // Zero line (dashed)
             val zeroY = height / 2
+            val chartRight = width - rightPadding
             val dashEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
             drawLine(
                 color = Color.Gray,
                 start = Offset(padding, zeroY),
-                end = Offset(width - padding, zeroY),
+                end = Offset(chartRight, zeroY),
                 strokeWidth = 2f,
                 pathEffect = dashEffect
             )
@@ -163,6 +171,69 @@ fun WormChart(
                 }
             }
 
+            // Draw max lead reference line and annotation
+            maxLeadPoint?.let { point ->
+                if (point.scoreDiff > 0) {
+                    val y = zeroY - (point.scoreDiff * yScale)
+                    // Dashed reference line
+                    drawLine(
+                        color = GswWinning.copy(alpha = 0.5f),
+                        start = Offset(padding, y),
+                        end = Offset(chartRight, y),
+                        strokeWidth = 1f,
+                        pathEffect = dashEffect
+                    )
+                    // Annotation
+                    drawContext.canvas.nativeCanvas.drawText(
+                        "+${point.scoreDiff} ${formatGameTime(point)}",
+                        chartRight + 8f,
+                        y + 12f,
+                        android.graphics.Paint().apply {
+                            color = android.graphics.Color.rgb(76, 175, 80) // GswWinning
+                            textSize = 28f
+                            typeface = android.graphics.Typeface.DEFAULT_BOLD
+                        }
+                    )
+                }
+            }
+
+            // Draw max trail reference line and annotation
+            maxTrailPoint?.let { point ->
+                if (point.scoreDiff < 0) {
+                    val y = zeroY - (point.scoreDiff * yScale)
+                    // Dashed reference line
+                    drawLine(
+                        color = GswLosing.copy(alpha = 0.5f),
+                        start = Offset(padding, y),
+                        end = Offset(chartRight, y),
+                        strokeWidth = 1f,
+                        pathEffect = dashEffect
+                    )
+                    // Annotation
+                    drawContext.canvas.nativeCanvas.drawText(
+                        "${point.scoreDiff} ${formatGameTime(point)}",
+                        chartRight + 8f,
+                        y + 12f,
+                        android.graphics.Paint().apply {
+                            color = android.graphics.Color.rgb(244, 67, 54) // GswLosing
+                            textSize = 28f
+                            typeface = android.graphics.Typeface.DEFAULT_BOLD
+                        }
+                    )
+                }
+            }
         }
     }
+}
+
+/**
+ * Format game time from WormPoint to readable string like "Q3 4:32"
+ */
+private fun formatGameTime(point: WormPoint): String {
+    val quarterLength = 720 // 12 minutes
+    val timeInQuarter = point.gameTimeSeconds - ((point.period - 1) * quarterLength)
+    val timeRemaining = quarterLength - timeInQuarter
+    val minutes = timeRemaining / 60
+    val seconds = timeRemaining % 60
+    return "Q${point.period} $minutes:${seconds.toString().padStart(2, '0')}"
 }
