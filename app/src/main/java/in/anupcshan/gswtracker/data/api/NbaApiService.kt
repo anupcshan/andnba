@@ -5,11 +5,6 @@ import `in`.anupcshan.gswtracker.data.model.BoxScoreResponse
 import `in`.anupcshan.gswtracker.data.model.PlayByPlayResponse
 import `in`.anupcshan.gswtracker.data.model.ScoreboardResponse
 import `in`.anupcshan.gswtracker.data.model.ScheduleResponse
-import `in`.anupcshan.gswtracker.data.model.StandingsResponse
-import `in`.anupcshan.gswtracker.data.model.TeamRecord
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.int
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -198,64 +193,4 @@ class NbaApiService(
         }
     }
 
-    /**
-     * Fetch league standings (team records)
-     * Requires specific headers for stats.nba.com API
-     */
-    suspend fun getStandings(): Result<Map<Int, TeamRecord>> = withContext(ioDispatcher) {
-        try {
-            val request = Request.Builder()
-                .url(NbaApiClient.getStandingsUrl())
-                .header("origin", "https://www.nba.com")
-                .header("referer", "https://www.nba.com/")
-                .header("sec-ch-ua-mobile", "?0")
-                .header("sec-ch-ua-platform", "\"Linux\"")
-                .header("sec-fetch-dest", "empty")
-                .header("sec-fetch-mode", "cors")
-                .header("sec-fetch-site", "same-site")
-                .header("user-agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
-                .build()
-
-            httpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    val error = "HTTP ${response.code}: ${response.message}"
-                    Log.e(TAG, "getStandings: $error")
-                    return@withContext Result.failure(Exception(error))
-                }
-
-                val body = response.body?.string()
-                if (body == null) {
-                    Log.e(TAG, "getStandings: Empty response body")
-                    return@withContext Result.failure(Exception("Empty response body"))
-                }
-
-                try {
-                    val standingsResponse = json.decodeFromString<StandingsResponse>(body)
-
-                    // Parse the standings data
-                    // Array indices: [2]=TeamID, [13]=WINS, [14]=LOSSES
-                    val recordsMap = mutableMapOf<Int, TeamRecord>()
-
-                    standingsResponse.resultSets.firstOrNull()?.rowSet?.forEach { row ->
-                        try {
-                            val teamId = row[2].jsonPrimitive.int
-                            val wins = row[13].jsonPrimitive.int
-                            val losses = row[14].jsonPrimitive.int
-                            recordsMap[teamId] = TeamRecord(teamId, wins, losses)
-                        } catch (e: Exception) {
-                            Log.w(TAG, "getStandings: Error parsing team record: ${e.message}")
-                        }
-                    }
-
-                    Result.success(recordsMap)
-                } catch (e: Exception) {
-                    Log.e(TAG, "getStandings: JSON parsing error", e)
-                    Result.failure(e)
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "getStandings: Network error", e)
-            Result.failure(e)
-        }
-    }
 }

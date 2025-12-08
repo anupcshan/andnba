@@ -7,7 +7,6 @@ import `in`.anupcshan.gswtracker.data.model.GameAction
 import `in`.anupcshan.gswtracker.data.model.RecentPlay
 import `in`.anupcshan.gswtracker.data.model.ScheduledGame
 import `in`.anupcshan.gswtracker.data.model.Team
-import `in`.anupcshan.gswtracker.data.model.TeamRecord
 import `in`.anupcshan.gswtracker.data.model.WormPoint
 import java.time.Instant
 import java.time.LocalDate
@@ -31,9 +30,6 @@ class GameRepository(
     private val apiService: NbaApiService,
     private val currentTimeProvider: () -> Instant = { Instant.now() }
 ) {
-
-    // In-memory cache for team records (refreshed on each scoreboard fetch)
-    private var teamRecordsCache: Map<Int, TeamRecord> = emptyMap()
 
     companion object {
         private const val TAG = "GameRepository"
@@ -59,16 +55,11 @@ class GameRepository(
 
     /**
      * Get today's game for specified team, if any
-     * Also fetches arena information from boxscore and team standings
+     * Also fetches arena information from boxscore
      * @param teamTricode The team's 3-letter code (e.g., "GSW", "LAL")
      * @return Pair of (Scoreboard, Game?) - includes scoreboard for date checking
      */
     suspend fun getTodaysTeamGame(teamTricode: String): Result<Pair<`in`.anupcshan.gswtracker.data.model.Scoreboard, Game?>> {
-        // Fetch standings first to update cache
-        apiService.getStandings().onSuccess { standings ->
-            teamRecordsCache = standings
-        }
-
         return apiService.getScoreboard().mapCatching { response ->
             val game = response.scoreboard.games.find { game ->
                 game.homeTeam.teamTricode == teamTricode ||
@@ -268,13 +259,9 @@ class GameRepository(
 
     /**
      * Convert ScheduledGame to Game for displaying in UI
-     * Uses cached team records from standings API
+     * Team records come directly from the schedule API
      */
     fun scheduledGameToGame(scheduledGame: ScheduledGame): Game {
-        // Look up team records from cache
-        val homeRecord = teamRecordsCache[scheduledGame.homeTeam.teamId]
-        val awayRecord = teamRecordsCache[scheduledGame.awayTeam.teamId]
-
         return Game(
             gameId = scheduledGame.gameId,
             gameCode = scheduledGame.gameCode,
@@ -289,8 +276,8 @@ class GameRepository(
                 teamCity = scheduledGame.homeTeam.teamCity ?: "",
                 teamTricode = scheduledGame.homeTeam.teamTricode ?: "TBD",
                 score = 0,
-                wins = homeRecord?.wins ?: 0,
-                losses = homeRecord?.losses ?: 0
+                wins = scheduledGame.homeTeam.wins,
+                losses = scheduledGame.homeTeam.losses
             ),
             awayTeam = Team(
                 teamId = scheduledGame.awayTeam.teamId,
@@ -298,8 +285,8 @@ class GameRepository(
                 teamCity = scheduledGame.awayTeam.teamCity ?: "",
                 teamTricode = scheduledGame.awayTeam.teamTricode ?: "TBD",
                 score = 0,
-                wins = awayRecord?.wins ?: 0,
-                losses = awayRecord?.losses ?: 0
+                wins = scheduledGame.awayTeam.wins,
+                losses = scheduledGame.awayTeam.losses
             ),
             arenaName = scheduledGame.arenaName
         )

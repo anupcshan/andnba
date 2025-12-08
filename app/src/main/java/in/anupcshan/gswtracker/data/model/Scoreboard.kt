@@ -83,5 +83,7 @@ data class ScheduledTeam(
     val teamId: Int,
     val teamName: String? = null,
     val teamCity: String? = null,
-    val teamTricode: String? = null
+    val teamTricode: String? = null,
+    val wins: Int = 0,
+    val losses: Int = 0
 )
