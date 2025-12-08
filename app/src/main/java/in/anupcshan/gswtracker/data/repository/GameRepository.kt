@@ -5,8 +5,12 @@ import `in`.anupcshan.gswtracker.data.api.NbaApiService
 import `in`.anupcshan.gswtracker.data.model.Game
 import `in`.anupcshan.gswtracker.data.model.GameAction
 import `in`.anupcshan.gswtracker.data.model.RecentPlay
+import `in`.anupcshan.gswtracker.data.model.Conference
+import `in`.anupcshan.gswtracker.data.model.ConferenceStandings
+import `in`.anupcshan.gswtracker.data.model.ConferenceTeams
 import `in`.anupcshan.gswtracker.data.model.ScheduledGame
 import `in`.anupcshan.gswtracker.data.model.Team
+import `in`.anupcshan.gswtracker.data.model.TeamStanding
 import `in`.anupcshan.gswtracker.data.model.WormPoint
 import java.time.Instant
 import java.time.LocalDate
@@ -290,5 +294,123 @@ class GameRepository(
             ),
             arenaName = scheduledGame.arenaName
         )
+    }
+
+    /**
+     * Calculate conference standings from schedule data
+     * Extracts the most recent record for each team
+     */
+    suspend fun getConferenceStandings(): Result<ConferenceStandings> {
+        return apiService.getSchedule().map { response ->
+            // Collect most recent record for each team
+            val teamRecords = mutableMapOf<Int, Pair<String, Pair<Int, Int>>>() // teamId -> (tricode, wins, losses)
+
+            // Go through all games and extract team records
+            // Later games in the schedule have more current records
+            response.leagueSchedule.gameDates.forEach { gameDate ->
+                gameDate.games.forEach { game ->
+                    // Only use records from completed games or games with actual records
+                    if (game.homeTeam.wins + game.homeTeam.losses > 0) {
+                        teamRecords[game.homeTeam.teamId] = Pair(
+                            game.homeTeam.teamTricode ?: "???",
+                            Pair(game.homeTeam.wins, game.homeTeam.losses)
+                        )
+                    }
+                    if (game.awayTeam.wins + game.awayTeam.losses > 0) {
+                        teamRecords[game.awayTeam.teamId] = Pair(
+                            game.awayTeam.teamTricode ?: "???",
+                            Pair(game.awayTeam.wins, game.awayTeam.losses)
+                        )
+                    }
+                }
+            }
+
+            // Build conference standings
+            val westernTeams = mutableListOf<TeamStanding>()
+            val easternTeams = mutableListOf<TeamStanding>()
+
+            teamRecords.forEach { (teamId, data) ->
+                val (tricode, record) = data
+                val (wins, losses) = record
+                val conference = ConferenceTeams.getConference(teamId) ?: return@forEach
+
+                val standing = TeamStanding(
+                    teamId = teamId,
+                    teamTricode = tricode,
+                    wins = wins,
+                    losses = losses,
+                    rank = 0, // Will be set after sorting
+                    gamesBack = 0f, // Will be calculated after sorting
+                    conference = conference
+                )
+
+                when (conference) {
+                    Conference.WESTERN -> westernTeams.add(standing)
+                    Conference.EASTERN -> easternTeams.add(standing)
+                }
+            }
+
+            // Sort by win percentage (descending), then by wins (descending) for tiebreaker
+            val sortedWestern = westernTeams
+                .sortedWith(compareByDescending<TeamStanding> { it.winPct }.thenByDescending { it.wins })
+                .mapIndexed { index, team ->
+                    team.copy(rank = index + 1)
+                }
+                .let { teams ->
+                    if (teams.isEmpty()) return@let teams
+                    val firstPlaceWins = teams.first().wins
+                    val firstPlaceLosses = teams.first().losses
+                    teams.map { team ->
+                        team.copy(gamesBack = calculateGamesBack(firstPlaceWins, firstPlaceLosses, team.wins, team.losses))
+                    }
+                }
+
+            val sortedEastern = easternTeams
+                .sortedWith(compareByDescending<TeamStanding> { it.winPct }.thenByDescending { it.wins })
+                .mapIndexed { index, team ->
+                    team.copy(rank = index + 1)
+                }
+                .let { teams ->
+                    if (teams.isEmpty()) return@let teams
+                    val firstPlaceWins = teams.first().wins
+                    val firstPlaceLosses = teams.first().losses
+                    teams.map { team ->
+                        team.copy(gamesBack = calculateGamesBack(firstPlaceWins, firstPlaceLosses, team.wins, team.losses))
+                    }
+                }
+
+            ConferenceStandings(
+                western = sortedWestern,
+                eastern = sortedEastern
+            )
+        }
+    }
+
+    /**
+     * Get standing info for a specific team
+     */
+    suspend fun getTeamStanding(teamId: Int): Result<TeamStanding?> {
+        return getConferenceStandings().map { standings ->
+            standings.western.find { it.teamId == teamId }
+                ?: standings.eastern.find { it.teamId == teamId }
+        }
+    }
+
+    /**
+     * Calculate games back from another team
+     * GB = ((W1 - W2) + (L2 - L1)) / 2
+     */
+    private fun calculateGamesBack(refWins: Int, refLosses: Int, teamWins: Int, teamLosses: Int): Float {
+        return ((refWins - teamWins) + (teamLosses - refLosses)) / 2f
+    }
+
+    /**
+     * Get games back from the next better position
+     */
+    fun getGamesBackFromPosition(standings: List<TeamStanding>, teamRank: Int, targetRank: Int): Float {
+        if (targetRank < 1 || targetRank >= teamRank || teamRank > standings.size) return 0f
+        val targetTeam = standings.getOrNull(targetRank - 1) ?: return 0f
+        val currentTeam = standings.getOrNull(teamRank - 1) ?: return 0f
+        return calculateGamesBack(targetTeam.wins, targetTeam.losses, currentTeam.wins, currentTeam.losses)
     }
 }

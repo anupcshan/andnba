@@ -49,7 +49,13 @@ fun GameScreen(viewModel: GameViewModel) {
     val lastUpdateTime by viewModel.lastUpdateTime.collectAsState()
     val dataUsage by viewModel.dataUsage.collectAsState()
     val liveTeams by viewModel.liveTeams.collectAsState()
+    val standings by viewModel.standings.collectAsState()
     val isRefreshing = gameState is GameState.Loading
+
+    // Helper to get standing info for a team
+    val getStandingInfo: (Int) -> String? = { teamId ->
+        viewModel.formatStandingInfo(teamId)
+    }
 
     // Keep screen on during live games
     KeepScreenOn(enabled = gameState is GameState.GameLive)
@@ -74,10 +80,10 @@ fun GameScreen(viewModel: GameViewModel) {
             ) {
                 when (val state = gameState) {
                     is GameState.Loading -> LoadingView()
-                    is GameState.NoGameToday -> NoGameView(state.nextGame, selectedTeam)
-                    is GameState.GameScheduled -> ScheduledGameView(state.game, selectedTeam)
-                    is GameState.GameLive -> LiveGameView(state.game, state.wormData, state.recentPlays, selectedTeam)
-                    is GameState.GameFinal -> FinalGameView(state.game, state.wormData, state.nextGame, selectedTeam)
+                    is GameState.NoGameToday -> NoGameView(state.nextGame, selectedTeam, getStandingInfo)
+                    is GameState.GameScheduled -> ScheduledGameView(state.game, selectedTeam, getStandingInfo)
+                    is GameState.GameLive -> LiveGameView(state.game, state.wormData, state.recentPlays, selectedTeam, getStandingInfo)
+                    is GameState.GameFinal -> FinalGameView(state.game, state.wormData, state.nextGame, selectedTeam, getStandingInfo)
                     is GameState.Error -> ErrorView(state.message) { viewModel.refreshGame() }
                 }
 
@@ -146,7 +152,7 @@ fun LoadingView() {
 }
 
 @Composable
-fun NoGameView(nextGame: Game?, selectedTeam: NBATeam) {
+fun NoGameView(nextGame: Game?, selectedTeam: NBATeam, getStandingInfo: (Int) -> String?) {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -202,13 +208,15 @@ fun NoGameView(nextGame: Game?, selectedTeam: NBATeam) {
                         TeamScore(
                             teamCode = it.homeTeam.teamTricode,
                             score = "--",
-                            record = "${it.homeTeam.wins}-${it.homeTeam.losses}"
+                            record = "${it.homeTeam.wins}-${it.homeTeam.losses}",
+                            standingInfo = getStandingInfo(it.homeTeam.teamId)
                         )
                         Text("vs", style = MaterialTheme.typography.bodyLarge)
                         TeamScore(
                             teamCode = it.awayTeam.teamTricode,
                             score = "--",
-                            record = "${it.awayTeam.wins}-${it.awayTeam.losses}"
+                            record = "${it.awayTeam.wins}-${it.awayTeam.losses}",
+                            standingInfo = getStandingInfo(it.awayTeam.teamId)
                         )
                     }
                 }
@@ -218,7 +226,7 @@ fun NoGameView(nextGame: Game?, selectedTeam: NBATeam) {
 }
 
 @Composable
-fun ScheduledGameView(game: Game, selectedTeam: NBATeam) {
+fun ScheduledGameView(game: Game, selectedTeam: NBATeam, getStandingInfo: (Int) -> String?) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -266,13 +274,15 @@ fun ScheduledGameView(game: Game, selectedTeam: NBATeam) {
                     TeamScore(
                         teamCode = game.homeTeam.teamTricode,
                         score = "--",
-                        record = "${game.homeTeam.wins}-${game.homeTeam.losses}"
+                        record = "${game.homeTeam.wins}-${game.homeTeam.losses}",
+                        standingInfo = getStandingInfo(game.homeTeam.teamId)
                     )
                     Text("vs", style = MaterialTheme.typography.bodyLarge)
                     TeamScore(
                         teamCode = game.awayTeam.teamTricode,
                         score = "--",
-                        record = "${game.awayTeam.wins}-${game.awayTeam.losses}"
+                        record = "${game.awayTeam.wins}-${game.awayTeam.losses}",
+                        standingInfo = getStandingInfo(game.awayTeam.teamId)
                     )
                 }
 
@@ -293,7 +303,8 @@ fun LiveGameView(
     game: Game,
     wormData: List<`in`.anupcshan.gswtracker.data.model.WormPoint> = emptyList(),
     recentPlays: List<RecentPlay> = emptyList(),
-    selectedTeam: NBATeam
+    selectedTeam: NBATeam,
+    getStandingInfo: (Int) -> String?
 ) {
     val playsListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -351,13 +362,15 @@ fun LiveGameView(
                     TeamScore(
                         teamCode = game.homeTeam.teamTricode,
                         score = game.homeTeam.score.toString(),
-                        record = "${game.homeTeam.wins}-${game.homeTeam.losses}"
+                        record = "${game.homeTeam.wins}-${game.homeTeam.losses}",
+                        standingInfo = getStandingInfo(game.homeTeam.teamId)
                     )
                     Text("vs", style = MaterialTheme.typography.bodyLarge)
                     TeamScore(
                         teamCode = game.awayTeam.teamTricode,
                         score = game.awayTeam.score.toString(),
-                        record = "${game.awayTeam.wins}-${game.awayTeam.losses}"
+                        record = "${game.awayTeam.wins}-${game.awayTeam.losses}",
+                        standingInfo = getStandingInfo(game.awayTeam.teamId)
                     )
                 }
             }
@@ -396,7 +409,7 @@ fun LiveGameView(
 }
 
 @Composable
-fun FinalGameView(game: Game, wormData: List<`in`.anupcshan.gswtracker.data.model.WormPoint> = emptyList(), nextGame: Game?, selectedTeam: NBATeam) {
+fun FinalGameView(game: Game, wormData: List<`in`.anupcshan.gswtracker.data.model.WormPoint> = emptyList(), nextGame: Game?, selectedTeam: NBATeam, getStandingInfo: (Int) -> String?) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -441,6 +454,7 @@ fun FinalGameView(game: Game, wormData: List<`in`.anupcshan.gswtracker.data.mode
                         teamCode = game.homeTeam.teamTricode,
                         score = game.homeTeam.score.toString(),
                         record = "${game.homeTeam.wins}-${game.homeTeam.losses}",
+                        standingInfo = getStandingInfo(game.homeTeam.teamId),
                         isWinner = homeWon
                     )
                     Text("vs", style = MaterialTheme.typography.bodyLarge)
@@ -448,6 +462,7 @@ fun FinalGameView(game: Game, wormData: List<`in`.anupcshan.gswtracker.data.mode
                         teamCode = game.awayTeam.teamTricode,
                         score = game.awayTeam.score.toString(),
                         record = "${game.awayTeam.wins}-${game.awayTeam.losses}",
+                        standingInfo = getStandingInfo(game.awayTeam.teamId),
                         isWinner = !homeWon
                     )
                 }
@@ -534,6 +549,7 @@ fun TeamScore(
     teamCode: String,
     score: String,
     record: String? = null,
+    standingInfo: String? = null,
     isWinner: Boolean = false
 ) {
     Column(
@@ -569,6 +585,14 @@ fun TeamScore(
                 text = it,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        standingInfo?.let {
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = it,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
         }
     }

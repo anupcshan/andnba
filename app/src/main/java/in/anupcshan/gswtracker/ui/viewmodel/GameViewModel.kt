@@ -4,9 +4,11 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import `in`.anupcshan.gswtracker.data.api.DataUsageTracker
+import `in`.anupcshan.gswtracker.data.model.ConferenceStandings
 import `in`.anupcshan.gswtracker.data.model.GameState
 import `in`.anupcshan.gswtracker.data.model.NBATeam
 import `in`.anupcshan.gswtracker.data.model.NBATeams
+import `in`.anupcshan.gswtracker.data.model.TeamStanding
 import `in`.anupcshan.gswtracker.data.repository.GameRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -35,6 +37,9 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     private val _liveTeams = MutableStateFlow<Set<String>>(emptySet())
     val liveTeams: StateFlow<Set<String>> = _liveTeams.asStateFlow()
 
+    private val _standings = MutableStateFlow<ConferenceStandings?>(null)
+    val standings: StateFlow<ConferenceStandings?> = _standings.asStateFlow()
+
     val dataUsage: StateFlow<Long> = DataUsageTracker.bytesUsed
 
     fun resetDataUsage() {
@@ -52,6 +57,68 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     init {
         viewModelScope.launch {
             fetchGameData(showLoading = true)
+        }
+        viewModelScope.launch {
+            fetchStandings()
+        }
+    }
+
+    /**
+     * Fetch conference standings (calculated from schedule data)
+     */
+    private suspend fun fetchStandings() {
+        repository.getConferenceStandings().onSuccess { standings ->
+            _standings.value = standings
+        }.onFailure { e ->
+            Log.w(TAG, "Failed to fetch standings: ${e.message}")
+        }
+    }
+
+    /**
+     * Get standing info for a team
+     */
+    fun getTeamStanding(teamId: Int): TeamStanding? {
+        val standings = _standings.value ?: return null
+        return standings.western.find { it.teamId == teamId }
+            ?: standings.eastern.find { it.teamId == teamId }
+    }
+
+    /**
+     * Format standing info for display (e.g., "8th • 0.5 GB")
+     */
+    fun formatStandingInfo(teamId: Int): String? {
+        val standing = getTeamStanding(teamId) ?: return null
+        val standings = _standings.value ?: return null
+
+        // Get the conference standings list
+        val confStandings = when (standing.conference) {
+            `in`.anupcshan.gswtracker.data.model.Conference.WESTERN -> standings.western
+            `in`.anupcshan.gswtracker.data.model.Conference.EASTERN -> standings.eastern
+        }
+
+        // Calculate GB from next better position
+        val gbFromNext = if (standing.rank > 1) {
+            repository.getGamesBackFromPosition(confStandings, standing.rank, standing.rank - 1)
+        } else {
+            0f
+        }
+
+        val rankSuffix = when (standing.rank) {
+            1 -> "st"
+            2 -> "nd"
+            3 -> "rd"
+            else -> "th"
+        }
+
+        return if (standing.rank == 1) {
+            "${standing.rank}$rankSuffix"
+        } else {
+            val gbStr = if (gbFromNext == gbFromNext.toInt().toFloat()) {
+                gbFromNext.toInt().toString()
+            } else {
+                String.format("%.1f", gbFromNext)
+            }
+            "${standing.rank}$rankSuffix • $gbStr GB"
         }
     }
 
