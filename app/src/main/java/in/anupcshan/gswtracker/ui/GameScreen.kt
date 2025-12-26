@@ -53,9 +53,9 @@ fun GameScreen(viewModel: GameViewModel) {
     val isRefreshing = gameState is GameState.Loading
 
     // Helper to get standing info for a team
-    val getStandingInfo: (Int) -> String? = { teamId ->
+    val getStandingInfo: (Int) -> String? = remember(standings) { { teamId ->
         viewModel.formatStandingInfo(teamId)
-    }
+    } }
 
     // Keep screen on during live games
     KeepScreenOn(enabled = gameState is GameState.GameLive)
