@@ -182,17 +182,24 @@ class GameRepository(
      * Clock format: "PT11M58.00S" (11 minutes 58 seconds remaining)
      */
     private fun calculateGameTimeSeconds(period: Int, clock: String): Int {
-        val quarterLength = 12 * 60 // 12 minutes per quarter
+        val regulationQuarterLength = 12 * 60 // 12 minutes per quarter
+        val overtimeLength = 5 * 60 // 5 minutes per overtime
 
         // Parse the ISO 8601 duration format: PT11M58.00S
         val minutesRemaining = Regex("""(\d+)M""").find(clock)?.groupValues?.get(1)?.toIntOrNull() ?: 0
         val secondsRemaining = Regex("""(\d+(?:\.\d+)?)S""").find(clock)?.groupValues?.get(1)?.toDoubleOrNull()?.toInt() ?: 0
 
-        val timeRemainingInQuarter = minutesRemaining * 60 + secondsRemaining
-        val timeElapsedInQuarter = quarterLength - timeRemainingInQuarter
+        val periodLength = if (period <= 4) regulationQuarterLength else overtimeLength
+        val timeRemainingInPeriod = minutesRemaining * 60 + secondsRemaining
+        val timeElapsedInPeriod = periodLength - timeRemainingInPeriod
 
-        // Total time elapsed = (completed quarters * 720) + time in current quarter
-        return ((period - 1) * quarterLength) + timeElapsedInQuarter
+        // Calculate cumulative time at start of this period
+        val completedRegulationQuarters = minOf(period - 1, 4)
+        val completedOvertimes = maxOf(0, period - 5)
+        val cumulativeTimeAtPeriodStart = (completedRegulationQuarters * regulationQuarterLength) +
+                (completedOvertimes * overtimeLength)
+
+        return cumulativeTimeAtPeriodStart + timeElapsedInPeriod
     }
 
     /**

@@ -80,18 +80,17 @@ fun WormChart(
             val xScale = (width - padding - rightPadding) / (lastGameTime - firstGameTime).coerceAtLeast(1)
             val yScale = (height - padding * 2) / (yAxisMax * 2)
 
-            // Draw alternating background colors for quarters
-            val quarterLength = 720 // 12 minutes per quarter in seconds
+            // Draw alternating background colors for periods
             val maxPeriodInData = wormData.maxOfOrNull { it.period } ?: 4
 
             for (period in 1..maxPeriodInData) {
-                val quarterStartTime = (period - 1) * quarterLength
-                val quarterEndTime = period * quarterLength
+                val periodStartTime = getCumulativeTimeAtPeriodStart(period)
+                val periodEndTime = periodStartTime + getPeriodLength(period)
 
-                // Only draw if this quarter overlaps with our data range
-                if (quarterEndTime > firstGameTime && quarterStartTime < lastGameTime) {
-                    val startX = padding + maxOf(0, quarterStartTime - firstGameTime) * xScale
-                    val endX = padding + minOf(lastGameTime - firstGameTime, quarterEndTime - firstGameTime) * xScale
+                // Only draw if this period overlaps with our data range
+                if (periodEndTime > firstGameTime && periodStartTime < lastGameTime) {
+                    val startX = padding + maxOf(0, periodStartTime - firstGameTime) * xScale
+                    val endX = padding + minOf(lastGameTime - firstGameTime, periodEndTime - firstGameTime) * xScale
 
                     // Alternate between two subtle background colors
                     val backgroundColor = if (period % 2 == 1) {
@@ -123,14 +122,14 @@ fun WormChart(
                 pathEffect = dashEffect
             )
 
-            // Quarter separator lines
-            // Draw lines at end of each quarter (Q1, Q2, Q3, ...)
+            // Period separator lines
+            // Draw lines at end of each period (Q1, Q2, Q3, Q4, OT1, ...)
             for (period in 1 until maxPeriodInData) {
-                val quarterEndTime = period * quarterLength
+                val periodEndTime = getCumulativeTimeAtPeriodStart(period) + getPeriodLength(period)
 
                 // Only draw if this time is within our data range
-                if (quarterEndTime > firstGameTime && quarterEndTime < lastGameTime) {
-                    val x = padding + (quarterEndTime - firstGameTime) * xScale
+                if (periodEndTime > firstGameTime && periodEndTime < lastGameTime) {
+                    val x = padding + (periodEndTime - firstGameTime) * xScale
                     drawLine(
                         color = separatorColor,
                         start = Offset(x, padding),
@@ -226,14 +225,35 @@ fun WormChart(
     }
 }
 
+private const val REGULATION_QUARTER_LENGTH = 720 // 12 minutes in seconds
+private const val OVERTIME_LENGTH = 300 // 5 minutes in seconds
+
 /**
- * Format game time from WormPoint to readable string like "Q3 4:32"
+ * Get the length of a period in seconds
+ */
+private fun getPeriodLength(period: Int): Int =
+    if (period <= 4) REGULATION_QUARTER_LENGTH else OVERTIME_LENGTH
+
+/**
+ * Get the cumulative game time at the start of a period
+ */
+private fun getCumulativeTimeAtPeriodStart(period: Int): Int {
+    val completedRegulationQuarters = minOf(period - 1, 4)
+    val completedOvertimes = maxOf(0, period - 5)
+    return (completedRegulationQuarters * REGULATION_QUARTER_LENGTH) +
+            (completedOvertimes * OVERTIME_LENGTH)
+}
+
+/**
+ * Format game time from WormPoint to readable string like "Q3 4:32" or "OT 2:30"
  */
 private fun formatGameTime(point: WormPoint): String {
-    val quarterLength = 720 // 12 minutes
-    val timeInQuarter = point.gameTimeSeconds - ((point.period - 1) * quarterLength)
-    val timeRemaining = quarterLength - timeInQuarter
+    val periodLength = getPeriodLength(point.period)
+    val periodStartTime = getCumulativeTimeAtPeriodStart(point.period)
+    val timeInPeriod = point.gameTimeSeconds - periodStartTime
+    val timeRemaining = periodLength - timeInPeriod
     val minutes = timeRemaining / 60
     val seconds = timeRemaining % 60
-    return "Q${point.period} $minutes:${seconds.toString().padStart(2, '0')}"
+    val periodLabel = if (point.period <= 4) "Q${point.period}" else "OT${point.period - 4}"
+    return "$periodLabel $minutes:${seconds.toString().padStart(2, '0')}"
 }
