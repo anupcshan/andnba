@@ -48,7 +48,8 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
     private var pollingJob: Job? = null
     private var currentGameId: String? = null
-    private var lastKnownScore: Pair<Int, Int>? = null // (homeScore, awayScore)
+    private var lastKnownClock: String? = null // gameClock value from last fetch
+    private var lastKnownScore: Pair<Int, Int>? = null // for free throws (clock doesn't run)
 
     companion object {
         private const val TAG = "GameViewModel"
@@ -128,6 +129,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     fun selectTeam(team: NBATeam) {
         if (_selectedTeam.value.tricode != team.tricode) {
             _selectedTeam.value = team
+            lastKnownClock = null
             lastKnownScore = null
             refreshGame()
         }
@@ -272,16 +274,18 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     }
 
     /**
-     * Fetch play-by-play data if period or score has changed
-     * This ensures recent plays update on every scoring event
+     * Fetch play-by-play data if period, clock, or score has changed
+     * Clock changes catch most plays; score changes catch free throws (clock stopped)
      */
     private suspend fun fetchPlayByPlayIfNeeded(game: `in`.anupcshan.gswtracker.data.model.Game) {
         val currentState = gameState.value
         val lastFetched = (currentState as? GameState.GameLive)?.lastFetchedPeriod ?: 0
+        val clockChanged = lastKnownClock != game.gameClock
         val currentScore = game.homeTeam.score to game.awayTeam.score
         val scoreChanged = lastKnownScore != currentScore
 
-        if ((game.period != lastFetched && game.period > 0) || scoreChanged) {
+        if ((game.period != lastFetched && game.period > 0) || clockChanged || scoreChanged) {
+            lastKnownClock = game.gameClock
             lastKnownScore = currentScore
             fetchPlayByPlayData(game)
         }
@@ -363,6 +367,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         _lastUpdateTime.value = null
         pollingJob?.cancel()
         pollingJob = null
+        lastKnownClock = null
         lastKnownScore = null
     }
 
