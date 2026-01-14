@@ -685,35 +685,61 @@ fun RecentPlaysSection(
             .fillMaxWidth()
             .height(100.dp)
     ) {
-        itemsIndexed(recentPlays) { _, play ->
+        itemsIndexed(recentPlays) { index, play ->
+            // Compare with next play (previous chronologically) to detect score change
+            val nextPlay = recentPlays.getOrNull(index + 1)
+            val homeScored = play.scoreHome != null && nextPlay?.scoreHome != null &&
+                    play.scoreHome > nextPlay.scoreHome
+            val awayScored = play.scoreAway != null && nextPlay?.scoreAway != null &&
+                    play.scoreAway > nextPlay.scoreAway
+            val isScoreChange = homeScored || awayScored
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 // Time and period
                 Text(
                     text = "${getPeriodLabel(play.period)} ${play.clock}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.width(70.dp)
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                // Team tricode (if available)
-                play.teamTricode?.let { tricode ->
-                    Text(
-                        text = tricode,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.width(36.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                // Show score only when it changed, highlight scoring team with bold
+                if (isScoreChange && play.scoreHome != null && play.scoreAway != null) {
+                    Row {
+                        Text(
+                            text = "${play.scoreHome}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (homeScored) FontWeight.Bold else FontWeight.Light
+                        )
+                        Text(
+                            text = "-",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Light
+                        )
+                        Text(
+                            text = "${play.scoreAway}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (awayScored) FontWeight.Bold else FontWeight.Light
+                        )
+                    }
+                } else {
+                    // Show team tricode for non-scoring plays
+                    play.teamTricode?.let { tricode ->
+                        Text(
+                            text = tricode,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
                 // Play description
                 Text(
                     text = play.description,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )

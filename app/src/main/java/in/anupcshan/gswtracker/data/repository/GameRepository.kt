@@ -162,7 +162,9 @@ class GameRepository(
                     teamTricode = action.teamTricode,
                     clock = formatClock(action.clock),
                     period = action.period,
-                    gameTimeSeconds = calculateGameTimeSeconds(action.period, action.clock)
+                    gameTimeSeconds = calculateGameTimeSeconds(action.period, action.clock),
+                    scoreHome = action.scoreHome?.toIntOrNull(),
+                    scoreAway = action.scoreAway?.toIntOrNull()
                 )
             }
     }
