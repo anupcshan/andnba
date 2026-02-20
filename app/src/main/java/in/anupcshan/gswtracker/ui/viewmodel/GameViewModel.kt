@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.Instant
 
 /**
  * ViewModel for managing game state and data fetching
@@ -47,6 +48,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     }
 
     private var pollingJob: Job? = null
+    private var tipoffJob: Job? = null
     private var currentGameId: String? = null
     private var lastKnownClock: String? = null // gameClock value from last fetch
     private var lastKnownScore: Pair<Int, Int>? = null // for free throws (clock doesn't run)
@@ -226,9 +228,10 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     private suspend fun handleGameState(game: `in`.anupcshan.gswtracker.data.model.Game) {
         when (game.gameStatus) {
             1 -> {
-                // Game scheduled
+                // Game scheduled - wait for tip-off then start checking
                 _gameState.value = GameState.GameScheduled(game)
                 stopPolling()
+                scheduleTipoffCheck(game)
             }
             2 -> {
                 // Game live - try to restore from cache first
@@ -345,6 +348,29 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     }
 
     /**
+     * Schedule a refresh at tip-off time so a scheduled game transitions to live automatically.
+     * After the scheduled time, polls every 30s until the game actually starts (tip-off is often late).
+     */
+    private fun scheduleTipoffCheck(game: `in`.anupcshan.gswtracker.data.model.Game) {
+        tipoffJob?.cancel()
+        val gameTimeUTC = game.gameTimeUTC ?: return
+        tipoffJob = viewModelScope.launch {
+            val tipoff = try { Instant.parse(gameTimeUTC) } catch (_: Exception) { return@launch }
+            val delayMs = tipoff.toEpochMilli() - System.currentTimeMillis()
+            if (delayMs > 0) {
+                delay(delayMs)
+            }
+            // Game should be starting - poll until it goes live
+            while (true) {
+                fetchGameData(showLoading = false)
+                // If we transitioned out of GameScheduled, we're done
+                if (_gameState.value !is GameState.GameScheduled) break
+                delay(30_000)
+            }
+        }
+    }
+
+    /**
      * Start polling for live game updates
      */
     private fun startPollingIfNeeded() {
@@ -367,6 +393,8 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         _lastUpdateTime.value = null
         pollingJob?.cancel()
         pollingJob = null
+        tipoffJob?.cancel()
+        tipoffJob = null
         lastKnownClock = null
         lastKnownScore = null
     }
