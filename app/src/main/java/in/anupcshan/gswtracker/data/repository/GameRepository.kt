@@ -75,6 +75,15 @@ class GameRepository(
                 apiService.getBoxScore(game.gameId).onSuccess { boxScore ->
                     game.arenaName = boxScore.game.arena?.arenaName
                 }
+                // Fall back to schedule API for arena info (boxscore may not have it before tip-off)
+                if (game.arenaName == null) {
+                    apiService.getSchedule().onSuccess { scheduleResponse ->
+                        val scheduledGame = scheduleResponse.leagueSchedule.gameDates
+                            .flatMap { it.games }
+                            .find { it.gameId == game.gameId }
+                        scheduledGame?.arenaName?.let { game.arenaName = it }
+                    }
+                }
             }
 
             response.scoreboard to game
