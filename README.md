@@ -120,27 +120,14 @@ See [UI_DESIGN.md](UI_DESIGN.md) for complete design specification.
 
 ## Development Status
 
-- [x] Project setup and build configuration
-- [x] Basic UI structure with Compose
-- [x] Theme and color scheme
-- [ ] API client implementation
-- [ ] Scoreboard parser
-- [ ] Play-by-Play parser
-- [ ] Worm chart visualization
-- [ ] WorkManager background polling
-- [ ] State management with ViewModel
-- [ ] Error handling and retry logic
-- [ ] Loading states
-- [ ] Pull-to-refresh
-
-## Next Steps
-
-1. Implement API client with OkHttp and caching
-2. Create data models for scoreboard and play-by-play
-3. Build worm chart with Canvas/Compose
-4. Implement game state management
-5. Add WorkManager for background updates
-6. Polish UI and animations
+- [x] Live score tracking with automatic polling
+- [x] Worm chart visualization with tap-to-select
+- [x] Play-by-play timeline with scoring highlights
+- [x] Auto-refresh at tip-off for scheduled games
+- [x] Conference standings
+- [x] Team selector with live game indicators
+- [x] Data usage tracking
+- [x] Pull-to-refresh
 
 ## License
 
