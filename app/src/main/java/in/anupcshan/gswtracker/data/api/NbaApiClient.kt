@@ -54,6 +54,18 @@ class NbaApiClient(context: Context) {
         maxSize = 10L * 1024 * 1024 // 10 MB
     )
 
+    private val browserHeadersInterceptor = okhttp3.Interceptor { chain ->
+        val request = chain.request().newBuilder()
+            .header("User-Agent", BROWSER_USER_AGENT)
+            .header("Accept", "application/json")
+            .header("sec-fetch-site", "same-site")
+            .header("sec-fetch-mode", "cors")
+            .header("sec-fetch-dest", "empty")
+            .header("Referer", NBA_REFERER)
+            .build()
+        chain.proceed(request)
+    }
+
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BASIC
     }
@@ -94,6 +106,7 @@ class NbaApiClient(context: Context) {
         .cache(cache)
         .addNetworkInterceptor(cacheInterceptor)
         .addNetworkInterceptor(dataUsageInterceptor)
+        .addInterceptor(browserHeadersInterceptor)
         .addInterceptor(loggingInterceptor)
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
@@ -103,6 +116,12 @@ class NbaApiClient(context: Context) {
         const val BASE_URL = "https://cdn.nba.com/static/json/liveData"
         const val SCOREBOARD_URL = "$BASE_URL/scoreboard/todaysScoreboard_00.json"
         const val SCHEDULE_URL = "https://cdn.nba.com/static/json/staticData/scheduleLeagueV2.json"
+
+        // cdn.nba.com returns HTTP 403 to OkHttp requests without browser-like
+        // headers. Omitting the Sec-Fetch headers reproduces the 403.
+        private const val BROWSER_USER_AGENT =
+            "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36"
+        private const val NBA_REFERER = "https://www.nba.com/"
 
         fun getPlayByPlayUrl(gameId: String): String {
             return "$BASE_URL/playbyplay/playbyplay_$gameId.json"
