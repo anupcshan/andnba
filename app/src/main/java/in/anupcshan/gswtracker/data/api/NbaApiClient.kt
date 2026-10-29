@@ -56,12 +56,16 @@ class NbaApiClient(context: Context) {
 
     private val browserHeadersInterceptor = okhttp3.Interceptor { chain ->
         val request = chain.request().newBuilder()
+            .header("sec-ch-ua", "\"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\", \"Google Chrome\";v=\"140\"")
+            .header("sec-ch-ua-mobile", "?1")
+            .header("sec-ch-ua-platform", "\"Android\"")
             .header("User-Agent", BROWSER_USER_AGENT)
-            .header("Accept", "application/json")
+            .header("Accept", "application/json, text/plain, */*")
             .header("sec-fetch-site", "same-site")
             .header("sec-fetch-mode", "cors")
             .header("sec-fetch-dest", "empty")
             .header("Referer", NBA_REFERER)
+            .header("Accept-Language", "en-US,en;q=0.9")
             .build()
         chain.proceed(request)
     }
